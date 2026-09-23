@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fedora KDE Setup Guide — Choose Your GPU</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    padding: 2rem;
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 700;
+    margin-bottom: .35rem;
+    text-align: center;
+  }
+
+  .subtitle {
+    font-size: 1.1rem;
+    color: #848d97;
+    margin-bottom: 3rem;
+    text-align: center;
+  }
+
+  .gpu-grid {
+    display: flex;
+    gap: 2.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* ── card base ─────────────────────────────── */
+  .gpu-card {
+    position: relative;
+    width: 340px;
+    padding: 2.5rem 2rem 2rem;
+    border-radius: 16px;
+    background: #161b22;
+    border: 2px solid #30363d;
+    text-align: center;
+    text-decoration: none;
+    color: #e6edf3;
+    transition: transform .25s ease, border-color .3s ease, box-shadow .3s ease;
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  .gpu-card:hover { transform: translateY(-6px); }
+
+  /* ── NVIDIA ────────────────────────────────── */
+  .gpu-card.nvidia:hover {
+    border-color: #76B900;
+    box-shadow: 0 0 30px rgba(118, 185, 0, .25), 0 0 60px rgba(118, 185, 0, .08);
+  }
+  .gpu-card.nvidia .gpu-icon { color: #76B900; }
+  .gpu-card.nvidia .gpu-badge {
+    background: rgba(118, 185, 0, .12);
+    color: #76B900;
+    border: 1px solid rgba(118, 185, 0, .3);
+  }
+  .gpu-card.nvidia .gpu-btn {
+    background: #76B900;
+    color: #0d1117;
+  }
+  .gpu-card.nvidia .gpu-btn:hover {
+    background: #8ad200;
+    box-shadow: 0 0 20px rgba(118, 185, 0, .4);
+  }
+
+  /* ── AMD ───────────────────────────────────── */
+  .gpu-card.amd:hover {
+    border-color: #ED1C24;
+    box-shadow: 0 0 30px rgba(237, 28, 36, .25), 0 0 60px rgba(237, 28, 36, .08);
+  }
+  .gpu-card.amd .gpu-icon { color: #ED1C24; }
+  .gpu-card.amd .gpu-badge {
+    background: rgba(237, 28, 36, .12);
+    color: #ED1C24;
+    border: 1px solid rgba(237, 28, 36, .3);
+  }
+  .gpu-card.amd .gpu-btn {
+    background: #ED1C24;
+    color: #fff;
+  }
+  .gpu-card.amd .gpu-btn:hover {
+    background: #ff3b42;
+    box-shadow: 0 0 20px rgba(237, 28, 36, .4);
+  }
+
+  /* ── shared pieces ─────────────────────────── */
+  .gpu-icon {
+    font-size: 3.2rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+
+  .gpu-card h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: .4rem;
+  }
+
+  .gpu-card .gpu-example {
+    font-size: .92rem;
+    color: #848d97;
+    margin-bottom: 1.2rem;
+  }
+
+  .gpu-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: .8rem;
+    font-weight: 600;
+    letter-spacing: .03em;
+    margin-bottom: 1.4rem;
+  }
+
+  .gpu-btn {
+    display: inline-block;
+    padding: 12px 36px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background .2s ease, box-shadow .2s ease;
+  }
+
+  .features {
+    text-align: left;
+    margin-bottom: 1.4rem;
+    padding: 0;
+    list-style: none;
+  }
+  .features li {
+    font-size: .88rem;
+    color: #b1bac4;
+    padding: 4px 0;
+    padding-left: 1.2em;
+    position: relative;
+  }
+  .features li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    font-weight: 700;
+  }
+  .gpu-card.nvidia .features li::before { color: #76B900; }
+  .gpu-card.amd .features li::before { color: #ED1C24; }
+
+  footer {
+    margin-top: 3.5rem;
+    font-size: .85rem;
+    color: #484f58;
+    text-align: center;
+  }
+  footer a { color: #58a6ff; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* ── responsive ────────────────────────────── */
+  @media (max-width: 750px) {
+    h1 { font-size: 1.7rem; }
+    .gpu-grid { gap: 1.5rem; }
+    .gpu-card { width: 100%; max-width: 400px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Fedora 44 KDE — Post-Install Guide</h1>
+<p class="subtitle">Pick your GPU to get the right guide</p>
+
+<div class="gpu-grid">
+
+  <!-- NVIDIA Card -->
+  <div class="gpu-card nvidia">
+    <span class="gpu-icon">⬢</span>
+    <h2>NVIDIA</h2>
+    <p class="gpu-example">GeForce RTX 50 / 40 / 30 series</p>
+    <span class="gpu-badge">Proprietary Driver + CUDA</span>
+    <ul class="features">
+      <li>akmod-nvidia (auto-rebuild on kernel updates)</li>
+      <li>CUDA &amp; OptiX for Blender / Resolve</li>
+      <li>NVENC hardware encoding (OBS, Resolve)</li>
+      <li>GreenWithEnvy GPU management</li>
+      <li>Secure Boot signing guide</li>
+    </ul>
+    <a href="fedora_kde_setup_guide_nvidia.html" class="gpu-btn">Open NVIDIA Guide →</a>
+  </div>
+
+  <!-- AMD Card -->
+  <div class="gpu-card amd">
+    <span class="gpu-icon">◆</span>
+    <h2>AMD</h2>
+    <p class="gpu-example">Radeon RX 9070 / 7900 / 7000 series</p>
+    <span class="gpu-badge">Mesa Open-Source + RDNA</span>
+    <ul class="features">
+      <li>Mesa freeworld VA-API &amp; VDPAU drivers</li>
+      <li>AMF hardware encoding (OBS, Resolve)</li>
+      <li>LACT for overclocking &amp; undervolting</li>
+      <li>amdgpu kernel driver (built-in)</li>
+      <li>HDR &amp; Gamescope support</li>
+    </ul>
+    <a href="fedora_kde_setup_guide.html" class="gpu-btn">Open AMD Guide →</a>
+  </div>
+
+</div>
+
+<footer>
+  Fedora 44 &middot; KDE Plasma 6.7 &middot; Ryzen 7 7800X3D &middot;
+  <a href="https://github.com">View on GitHub</a>
+</footer>
+
+</body>
+</html>
