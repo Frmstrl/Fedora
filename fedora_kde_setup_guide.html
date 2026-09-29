@@ -200,26 +200,7 @@ You now have <strong>both</strong> container runtimes:
 Docker's daemon runs as root and <strong>bypasses firewalld</strong> by injecting raw iptables rules. Any port you expose with <code>docker run -p</code> is open to your network, even if firewalld says otherwise. Podman does not have this problem. Be mindful of what you expose.</p>
 </blockquote>
 <hr />
-<h2>Step 9 — OpenRazer</h2>
-<pre><code class="language-bash">sudo dnf install kernel-devel -y
-sudo dnf config-manager addrepo --from-repofile=https://openrazer.github.io/hardware:razer.repo
-
-# Install the driver (openrazer-meta) and the GUI (polychromatic) from the same repo
-sudo dnf install openrazer-meta polychromatic -y
-
-# Grant your user permission to control the hardware
-sudo groupadd plugdev 2&gt;/dev/null || true
-sudo gpasswd -a $USER plugdev
-</code></pre>
-<blockquote>
-<p>[!NOTE]
-If you have Secure Boot enabled, use the akmod version instead:
-<code>bash
-sudo dnf copr enable lsevcik/akmod-openrazer -y
-sudo dnf install akmod-openrazer -y</code></p>
-</blockquote>
-<hr />
-<h2>Step 10 — OpenRGB</h2>
+<h2>Step 9 — OpenRGB</h2>
 <pre><code class="language-bash">sudo dnf install openrgb i2c-tools -y
 
 # Load AMD I2C modules
@@ -237,7 +218,7 @@ sudo usermod $USER -aG i2c
 sudo grubby --update-kernel=ALL --args=&quot;acpi_enforce_resources=lax&quot;
 </code></pre>
 <hr />
-<h2>Step 11 — Visual Studio Code</h2>
+<h2>Step 10 — Visual Studio Code</h2>
 <pre><code class="language-bash">sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
 
 echo -e &quot;[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\nautorefresh=1\ntype=rpm-md\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc&quot; | sudo tee /etc/yum.repos.d/vscode.repo &gt; /dev/null
@@ -246,11 +227,11 @@ sudo dnf check-update
 sudo dnf install code -y
 </code></pre>
 <hr />
-<h2>Step 12 — Archivers</h2>
+<h2>Step 11 — Archivers</h2>
 <pre><code class="language-bash">sudo dnf install p7zip p7zip-plugins unrar -y
 </code></pre>
 <hr />
-<h2>Step 13 — Microsoft &amp; Google Fonts (For Affinity &amp; Resolve)</h2>
+<h2>Step 12 — Microsoft &amp; Google Fonts (For Affinity &amp; Resolve)</h2>
 <pre><code class="language-bash">sudo dnf install curl cabextract mkfontscale fontconfig -y
 
 # Install Microsoft Core Fonts (Arial, Times New Roman, etc.)
@@ -265,12 +246,12 @@ sudo dnf install google-roboto-fonts google-noto-sans-fonts google-noto-serif-fo
 sudo fc-cache -fv
 </code></pre>
 <hr />
-<h2>Step 14 — Inkscape</h2>
+<h2>Step 13 — Inkscape</h2>
 <p>Vector graphics editor. Native RPM is strongly recommended — the Flatpak version breaks Python extensions and can't access system tools (LaTeX, Ghostscript).</p>
 <pre><code class="language-bash">sudo dnf install inkscape -y
 </code></pre>
 <hr />
-<h2>Step 15 — Gaming</h2>
+<h2>Step 14 — Gaming</h2>
 <pre><code class="language-bash">sudo dnf install steam gamemode mangohud goverlay gamescope mesa-vulkan-drivers.i686 mesa-dri-drivers.i686 -y
 sudo dnf install mesa-va-drivers-freeworld.i686 mesa-vdpau-drivers-freeworld.i686 -y
 </code></pre>
@@ -289,7 +270,7 @@ sudo dnf install mesa-va-drivers-freeworld.i686 mesa-vdpau-drivers-freeworld.i68
 <p><strong>Combine them all at once:</strong>
 <code>gamemoderun gamescope --hdr-enabled -W 3840 -H 2160 -f -- mangohud %command%</code></p>
 <hr />
-<h2>Step 16 — Virtualization (VirtualBox)</h2>
+<h2>Step 15 — Virtualization (VirtualBox)</h2>
 <p>VirtualBox is an easy-to-use virtual machine manager. Because it uses custom kernel modules, we install <code>akmods</code> to automatically rebuild its drivers in the background whenever Fedora updates your system kernel.</p>
 <pre><code class="language-bash"># Install VirtualBox and the akmod companion
 sudo dnf install VirtualBox akmod-VirtualBox -y
@@ -312,7 +293,7 @@ sudo usermod -aG vboxusers $USER
 2. <strong>The permanent fix:</strong> Wait a few days for RPM Fusion to release an update, run <code>sudo dnf update</code>, and then run <code>sudo akmods --force</code> to rebuild the driver for the new kernel.</p>
 </blockquote>
 <hr />
-<h2>Step 17 — Tailscale (Mesh VPN)</h2>
+<h2>Step 16 — Tailscale (Mesh VPN)</h2>
 <p>Zero-config mesh VPN that connects all your devices into a private network. Works through NAT/firewalls without port forwarding.</p>
 <pre><code class="language-bash"># Run the official automated install script
 curl -fsSL https://tailscale.com/install.sh | sh
@@ -339,7 +320,7 @@ Out of the box, Fedora's firewall is highly restrictive. If you do not configure
 This all happens silently in the background. It does <em>not</em> weaken your computer's main security because the "trust" is only applied to the private VPN network. Your standard internet connection (Wi-Fi or Ethernet) remains fully locked down by Fedora's default strict firewall rules.</p>
 </blockquote>
 <hr />
-<h2>Step 18 — Sunshine (Game Streaming)</h2>
+<h2>Step 17 — Sunshine (Game Streaming)</h2>
 <p>Streams your desktop and games to any device running the Moonlight client. Pairs perfectly with Tailscale for remote streaming.</p>
 <pre><code class="language-bash"># Enable the official LizardByte COPR repository
 sudo dnf copr enable lizardbyte/stable -y
@@ -382,11 +363,11 @@ sudo loginctl enable-linger $USER
 </blockquote>
 <hr />
 <h2>⟳ REBOOT</h2>
-<p>Everything above needs a reboot to apply: kernel parameters, Mesa drivers, DKMS modules (OpenRazer), kernel modules (uinput, i2c), and user group memberships (<code>docker</code>, <code>libvirt</code>, <code>input</code>, <code>i2c</code>, <code>plugdev</code>).</p>
+<p>Everything above needs a reboot to apply: kernel parameters, Mesa drivers, kernel modules (uinput, i2c), and user group memberships (<code>docker</code>, <code>libvirt</code>, <code>input</code>, <code>i2c</code>).</p>
 <pre><code class="language-bash">sudo reboot
 </code></pre>
 <hr />
-<h2>Step 19 — Verify hardware &amp; system setup</h2>
+<h2>Step 18 — Verify hardware &amp; system setup</h2>
 <p>After rebooting, verify all hardware drivers, system groups, and networking services:</p>
 <pre><code class="language-bash"># AMD GPU detected?
 lspci | grep -i amd
@@ -397,9 +378,6 @@ vdpauinfo
 
 # LACT running?
 systemctl status lactd
-
-# OpenRazer running?
-systemctl --user status openrazer-daemon
 
 # Snapper working?
 sudo snapper -c root list
@@ -420,7 +398,7 @@ tailscale status
 systemctl --user status sunshine
 </code></pre>
 <hr />
-<h2>Step 20 — PostgreSQL</h2>
+<h2>Step 19 — PostgreSQL</h2>
 <p>Native Fedora package. Standards-compliant SQL — what you learn here transfers to any database.</p>
 <pre><code class="language-bash">sudo dnf install postgresql-server postgresql-contrib -y
 
@@ -454,7 +432,7 @@ sudo systemctl restart postgresql
 <strong>GUI clients:</strong> Use <strong>DBeaver</strong> (<code>sudo dnf install dbeaver</code>) or the PostgreSQL extension in VS Code/Cursor for a visual interface.</p>
 </blockquote>
 <hr />
-<h2>Step 21 — MongoDB (Podman container)</h2>
+<h2>Step 20 — MongoDB (Podman container)</h2>
 <p>MongoDB Inc. dropped Fedora support in 2019. The cleanest way to run it is in a rootless Podman container using <strong>Quadlet</strong> (a feature built directly into Fedora's pre-installed Podman engine). This allows the container to be managed exactly like a native systemd service — no extra downloads required.</p>
 <pre><code class="language-bash"># Create persistent data directory
 mkdir -p ~/mongodb-data
@@ -502,7 +480,7 @@ Change <code>SuperSecretPassword</code> to something real. The <code>:Z</code> S
 <li><strong>From GUI tools / App code:</strong> Connect via standard connection string <code>mongodb://admin:SuperSecretPassword@127.0.0.1:27017</code> using an app like <strong>MongoDB Compass</strong> or VS Code extensions.</li>
 </ul>
 <hr />
-<h2>Step 22 — Flatpak Apps</h2>
+<h2>Step 21 — Flatpak Apps</h2>
 <pre><code class="language-bash">flatpak install flathub net.davidotek.pupgui2 -y          # ProtonUp-Qt
 flatpak install flathub org.kde.krita -y                   # Krita
 flatpak install flathub com.discordapp.Discord -y          # Discord
@@ -511,6 +489,7 @@ flatpak install flathub app.zen_browser.zen -y             # Zen Browser
 flatpak install flathub org.localsend.localsend_app -y     # LocalSend
 flatpak install flathub com.rtosta.zapzap -y               # WhatsApp (ZapZap wrapper)
 flatpak install flathub org.videolan.VLC -y                # VLC Media Player
+flatpak install flathub com.obsproject.Studio -y           # OBS Studio
 </code></pre>
 <blockquote>
 <p>[!NOTE]
@@ -525,12 +504,12 @@ sudo firewall-cmd --add-port=53317/udp --permanent
 sudo firewall-cmd --reload
 </code></pre>
 <hr />
-<h2>Step 23 — OBS Studio (RPM)</h2>
+<h2>Step 22 — OBS Studio (RPM)</h2>
 <p>For OBS Studio, the native RPM version is highly recommended over the Flatpak. The RPM version has direct access to your already-configured system drivers and codecs, meaning hardware encoding (VA-API H.264/HEVC/AV1) and screen capture work perfectly out of the box without complex runtime version juggling.</p>
 <pre><code class="language-bash">sudo dnf install obs-studio -y
 </code></pre>
 <hr />
-<h2>Step 24 — Lian Li Linux (build from source)</h2>
+<h2>Step 23 — Lian Li Linux (build from source)</h2>
 <pre><code class="language-bash"># Install build dependencies
 sudo dnf install hidapi-devel libusb1-devel fontconfig-devel \
   libxkbcommon-devel wayland-devel libX11-devel libinput-devel libdrm-devel \
@@ -547,9 +526,14 @@ sudo cp packaging/udev/99-lianli.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 
-# Install binaries
-sudo install -Dm755 target/release/lianli-daemon /usr/bin/lianli-daemon
-sudo install -Dm755 target/release/lianli-gui /usr/bin/lianli-gui
+# Fix hardcoded paths in the service and desktop files
+sed -i 's|/usr/bin/lianli|/usr/local/bin/lianli|g' packaging/systemd/lianli-daemon.service
+sed -i 's|Exec=lianli-gui|Exec=/usr/local/bin/lianli-gui|g' packaging/desktop/com.sgtaziz.lianlilinux.desktop
+sed -i 's|/usr/bin/lianli|/usr/local/bin/lianli|g' packaging/desktop/com.sgtaziz.lianlilinux.desktop
+
+# Install binaries to /usr/local/bin (safest for custom compiled software)
+sudo install -Dm755 target/release/lianli-daemon /usr/local/bin/lianli-daemon
+sudo install -Dm755 target/release/lianli-gui /usr/local/bin/lianli-gui
 
 # Install and start the systemd user service
 sudo install -Dm644 packaging/systemd/lianli-daemon.service /usr/lib/systemd/user/lianli-daemon.service
@@ -566,7 +550,7 @@ cp packaging/desktop/com.sgtaziz.lianlilinux.desktop ~/.local/share/applications
 update-desktop-database ~/.local/share/applications/
 </code></pre>
 <hr />
-<h2>Step 25 — DaVinci Resolve 21.0 (in Distrobox)</h2>
+<h2>Step 24 — DaVinci Resolve 21.0 (in Distrobox)</h2>
 <p><strong>Before starting:</strong> download the DaVinci Resolve 21.0 <code>.run</code> installer from <a href="https://www.blackmagicdesign.com/products/davinciresolve">blackmagicdesign.com</a>.<br>
 Leave the downloaded <code>DaVinci_Resolve_Studio_21.0_Linux.run</code> file in <code>~/Downloads</code>.</p>
 <blockquote>
@@ -601,7 +585,7 @@ unzip ~/Downloads/DaVinci_Resolve_*_Linux.zip -d ~/Downloads/
 distrobox-export --app DaVinciResolve
 </code></pre>
 <hr />
-<h2>Step 26 — DaVinci Resolve AAC Audio Fixes</h2>
+<h2>Step 25 — DaVinci Resolve AAC Audio Fixes</h2>
 <p>DaVinci Resolve on Linux lacks AAC audio support. We will use two different tools to fix importing (hearing audio in the timeline) and exporting (rendering to AAC).</p>
 <p><strong>1. Fix Importing (davinci-resolve-audio-fix):</strong>
 This watches a folder and converts AAC to PCM automatically. Run this on your <strong>host Fedora system</strong>.</p>
@@ -631,7 +615,7 @@ cd aac_encoder_plugin-linux-bundle
 sudo ./install.sh
 </code></pre>
 <hr />
-<h2>Step 27 — Affinity Photo/Designer/Publisher (in Distrobox)</h2>
+<h2>Step 26 — Affinity Photo/Designer/Publisher (in Distrobox)</h2>
 <p>Runs Affinity apps via Wine inside an isolated container. Zero footprint on host — delete the container and everything is gone.</p>
 <pre><code class="language-bash"># Create a dedicated container
 distrobox create --name affinitybox --image fedora:44
@@ -669,7 +653,7 @@ distrobox stop affinitybox
 distrobox rm affinitybox</code></p>
 </blockquote>
 <hr />
-<h2>Step 28 — Cherry Studio (Multi-Provider AI Chat)</h2>
+<h2>Step 27 — Cherry Studio (Multi-Provider AI Chat)</h2>
 <p>Open-source AI chat client that supports 60+ providers — plug in your Claude, OpenAI, Gemini, or any API key. Full conversation history stored locally.</p>
 <p>Download the latest <code>.AppImage</code> from <a href="https://github.com/CherryHQ/cherry-studio/releases">Cherry Studio GitHub releases</a>, then integrate it with Gearlever:</p>
 <pre><code class="language-bash"># Move to your local bin
@@ -682,7 +666,7 @@ mv ~/Downloads/Cherry-Studio-*.AppImage ~/.local/bin/cherry-studio.appimage
 Cherry Studio also connects to <strong>local models</strong> via Ollama or LM Studio, so you can chat with Claude, GPT, and local models all from one app.</p>
 </blockquote>
 <hr />
-<h2>Step 29 — LM Studio (Local AI Models)</h2>
+<h2>Step 28 — LM Studio (Local AI Models)</h2>
 <p>Run AI models entirely on your machine — no API keys, no internet, full privacy. Supports Llama, Mistral, Gemma, and hundreds more.</p>
 <p>Download the latest <code>.AppImage</code> from <a href="https://lmstudio.ai/">lmstudio.ai</a>, then:</p>
 <pre><code class="language-bash">chmod +x ~/Downloads/LM-Studio-*.AppImage
@@ -709,7 +693,6 @@ systemctl status lactd
 systemctl status docker
 systemctl status tailscaled
 systemctl --user status sunshine
-systemctl --user status openrazer-daemon
 sudo snapper -c root list
 </code></pre>
 <hr />
@@ -747,11 +730,6 @@ sudo snapper -c root list
 <td style="text-align: left;">Docker CE</td>
 <td style="text-align: left;">DNF (Docker repo)</td>
 <td style="text-align: left;">University coursework, full Docker Compose compatibility</td>
-</tr>
-<tr>
-<td style="text-align: left;">OpenRazer</td>
-<td style="text-align: left;">DNF (repo)</td>
-<td style="text-align: left;">Razer peripherals management (DKMS kernel module)</td>
 </tr>
 <tr>
 <td style="text-align: left;">OpenRGB</td>
@@ -814,14 +792,9 @@ sudo snapper -c root list
 <td style="text-align: left;">NoSQL database, containerized with systemd user service</td>
 </tr>
 <tr>
-<td style="text-align: left;">Flatpak Apps (VLC, Blender, Krita, etc.)</td>
+<td style="text-align: left;">Flatpak Apps (OBS, VLC, Blender, Krita, etc.)</td>
 <td style="text-align: left;">Flatpak</td>
-<td style="text-align: left;">Self-contained productivity &amp; communication apps</td>
-</tr>
-<tr>
-<td style="text-align: left;">OBS Studio</td>
-<td style="text-align: left;">DNF (RPM Fusion)</td>
-<td style="text-align: left;">Screen recording with direct hardware encoder access</td>
+<td style="text-align: left;">Self-contained productivity, media &amp; communication apps</td>
 </tr>
 <tr>
 <td style="text-align: left;">Lian Li Linux</td>
@@ -866,7 +839,6 @@ sudo snapper -c root list
 │   ├── default/grub-btrfs     &lt;-- OverlayFS kernel parameter config
 │   ├── udev/rules.d/          &lt;-- Hardware permissions
 │   │   ├── 99-lact.rules      &lt;-- GPU overclocking permissions
-│   │   ├── 99-openrazer.rules &lt;-- Razer device permissions
 │   │   └── 99-lianli.rules    &lt;-- Lian Li USB fan controller access
 │   └── updatedb.conf          &lt;-- Blocked locate from indexing snapshots
 │
@@ -876,14 +848,14 @@ sudo snapper -c root list
 │   │   ├── docker             &lt;-- Global Docker daemon
 │   │   ├── tailscale          &lt;-- VPN daemon
 │   │   ├── psql               &lt;-- PostgreSQL database client
-│   │   ├── openrazer-daemon   &lt;-- Razer peripheral controller
 │   │   ├── openrgb            &lt;-- Motherboard/RAM RGB controller
 │   │   ├── code               &lt;-- VS Code Editor
 │   │   ├── 7z / unrar         &lt;-- Archive tools
 │   │   ├── inkscape           &lt;-- Vector graphics editor
-│   │   ├── obs                &lt;-- OBS Studio
 │   │   ├── gamemoded / mangohud / gamescope &lt;-- Gaming performance tools
-│   │   ├── VirtualBox         &lt;-- Virtual machine manager
+│   │   └── VirtualBox         &lt;-- Virtual machine manager
+│   │
+│   ├── local/bin/
 │   │   └── lianli-daemon / lianli-gui &lt;-- Fan controller (compiled from source)
 │   │
 │   ├── share/fonts/           &lt;-- MS Core &amp; Google Fonts
@@ -900,7 +872,8 @@ sudo snapper -c root list
 │           ├── it.mijorus.gearlever/  &lt;-- Gearlever
 │           ├── org.blender.Blender/   &lt;-- Blender
 │           ├── org.kde.krita/         &lt;-- Krita
-│           └── org.videolan.VLC/      &lt;-- VLC Media Player
+│           ├── org.videolan.VLC/      &lt;-- VLC Media Player
+│           └── com.obsproject.Studio/ &lt;-- OBS Studio
 │
 └── .snapshots/                &lt;-- Managed by Snapper (rolls back everything above this line)
     ├── 1/snapshot/
