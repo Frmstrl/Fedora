@@ -186,9 +186,11 @@ sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linu
 # Install Docker CE
 sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-# Enable the Docker daemon and add your user
-sudo systemctl enable --now docker
+# Add your user to the docker group
 sudo usermod -aG docker $USER
+
+# Start Docker manually (do not enable it on boot for security)
+sudo systemctl start docker
 </code></pre>
 <blockquote>
 <p>[!NOTE]
@@ -196,8 +198,9 @@ You now have <strong>both</strong> container runtimes:
 - <code>docker</code> — for university assignments, Docker Compose labs, team projects
 - <code>podman</code> — for personal containers (MongoDB, etc.), Distrobox, rootless security</p>
 <p>Log out and back in for the <code>docker</code> group to take effect.</p>
-<p>[!WARNING]
-Docker's daemon runs as root and <strong>bypasses firewalld</strong> by injecting raw iptables rules. Any port you expose with <code>docker run -p</code> is open to your network, even if firewalld says otherwise. Podman does not have this problem. Be mindful of what you expose.</p>
+<p><strong>Important:</strong> Docker's daemon runs as root and <strong>bypasses firewalld</strong> by injecting raw iptables rules. For security, Docker is NOT set to start on boot.
+- When you need to do coursework, run: <code>sudo systemctl start docker</code>
+- When you are finished, run: <code>sudo systemctl stop docker</code></p>
 </blockquote>
 <hr />
 <h2>Step 9 — OpenRGB</h2>
@@ -217,6 +220,11 @@ sudo usermod $USER -aG i2c
 # Fix ACPI conflicts for motherboard/RAM RGB (ASUS/Gigabyte/ASRock)
 sudo grubby --update-kernel=ALL --args=&quot;acpi_enforce_resources=lax&quot;
 </code></pre>
+<blockquote>
+<p>[!WARNING]
+<strong>System Freezes (Kernel Panics):</strong> Using <code>acpi_enforce_resources=lax</code> allows OpenRGB to control motherboard and RAM lights, but it removes a safety lock on your motherboard's thermal sensors. If the system tries to read a temperature at the exact millisecond you change an RGB light, the collision will cause your PC to completely freeze.</p>
+<p><strong>What to do:</strong> If your PC locks up (screen freezes, buzzing audio), simply hold down your physical power button for 5 seconds to force a shut off, then turn it back on. No permanent damage is done, and everything will be back to normal.</p>
+</blockquote>
 <hr />
 <h2>Step 10 — Visual Studio Code</h2>
 <pre><code class="language-bash">sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
@@ -398,44 +406,68 @@ tailscale status
 systemctl --user status sunshine
 </code></pre>
 <hr />
-<h2>Step 19 — PostgreSQL</h2>
-<p>Native Fedora package. Standards-compliant SQL — what you learn here transfers to any database.</p>
-<pre><code class="language-bash">sudo dnf install postgresql-server postgresql-contrib -y
-
-# Initialize the database cluster
-sudo postgresql-setup --initdb
+<h2>Step 19 — PostgreSQL (Podman + DHI)</h2>
+<p>Runs PostgreSQL in a security-hardened container from <a href="https://dhi.io">Docker Hardened Images (DHI)</a>. The cleanest way to run it is in a rootless Podman container using <strong>Quadlet</strong> (a feature built directly into Fedora's pre-installed Podman engine). This allows the container to be managed exactly like a native systemd service.</p>
+<blockquote>
+<p>[!NOTE]
+<strong>Prerequisites:</strong> DHI requires a free Docker Hub login to pull their hardened images.</p>
+</blockquote>
+<p><strong>1. Authenticate with the DHI registry (one-time):</strong></p>
+<pre><code class="language-bash">podman login dhi.io
 </code></pre>
-<h4>Optional: On-Demand PostgreSQL</h4>
-<p>Leaving the database always running uses ~150-200MB of idle RAM. If you prefer a leaner system for gaming, you can manage it manually:</p>
-<ul>
-<li>Start when needed: <code>sudo systemctl start postgresql</code></li>
-<li>Stop when done: <code>sudo systemctl stop postgresql</code></li>
-<li>Enable auto-start on boot with: <code>sudo systemctl enable postgresql</code></li>
-<li>Disable auto-start on boot with: <code>sudo systemctl disable postgresql</code></li>
-</ul>
-<p>To create your first database and user:</p>
-<pre><code class="language-bash"># Switch to the postgres system user
-sudo -u postgres psql
-
-# Inside psql:
-CREATE USER daniel WITH PASSWORD 'your_password' CREATEDB;
-CREATE DATABASE mydb OWNER daniel;
-\q
+<p><strong>2. Create persistent data directory:</strong></p>
+<pre><code class="language-bash">mkdir -p ~/Database-data/postgres
 </code></pre>
-<p>Fix local authentication so you can connect as your user:</p>
-<pre><code class="language-bash">sudo sed -i 's/^local.*all.*all.*ident/local   all             all                                     scram-sha-256/' /var/lib/pgsql/data/pg_hba.conf
-sudo sed -i 's/^host.*all.*all.*127.0.0.1\/32.*ident/host    all             all             127.0.0.1\/32            scram-sha-256/' /var/lib/pgsql/data/pg_hba.conf
-sudo systemctl restart postgresql
+<p><strong>3. Create the Quadlet configuration:</strong></p>
+<p>Create the file at <code>~/.config/containers/systemd/postgres.container</code>:</p>
+<pre><code class="language-ini">[Unit]
+Description=PostgreSQL Database Container
+After=network-online.target
+
+[Container]
+Image=dhi.io/postgres:17-debian13
+ContainerName=postgres
+PublishPort=127.0.0.1:5432:5432
+Volume=%h/Database-data/postgres:/var/lib/postgresql/data:Z
+Environment=POSTGRES_USER=daniel POSTGRES_PASSWORD=your_password POSTGRES_DB=mydb
+
+[Service]
+Restart=no
+</code></pre>
+<p><strong>4. Activate the service:</strong></p>
+<pre><code class="language-bash">systemctl --user daemon-reload
+systemctl --user start postgres
 </code></pre>
 <blockquote>
+<p>[!IMPORTANT]
+<strong>No auto-start by design.</strong> Because we set <code>Restart=no</code> and omitted an <code>[Install]</code> section, it will NOT start on boot. This saves ~150-200MB of idle RAM when you're gaming or not developing.</p>
+</blockquote>
+<h4>On-Demand PostgreSQL:</h4>
+<ul>
+<li><strong>Where are my files?</strong> All database files are stored natively in your home folder at <code>~/Database-data/postgres</code>. Your data persists even if the container is deleted or updated. The <code>:Z</code> SELinux label ensures the container has permission to read/write to this folder.</li>
+<li><strong>Start when needed:</strong> <code>systemctl --user start postgres</code></li>
+<li><strong>Stop when done:</strong> <code>systemctl --user stop postgres</code></li>
+<li><strong>Check status:</strong> <code>systemctl --user status postgres</code></li>
+<li><strong>View logs:</strong> <code>journalctl --user -fu postgres</code></li>
+</ul>
+<p><strong>5. Connect to the database:</strong></p>
+<pre><code class="language-bash"># Connect to the running container
+podman exec -it postgres psql -U daniel -d mydb
+
+# Inside psql — verify it works:
+SELECT version();
+\q
+</code></pre>
+<p>From the host, you can also connect with any standard PostgreSQL client on <code>127.0.0.1:5432</code> (user <code>daniel</code>, password <code>your_password</code>, database <code>mydb</code>). Authentication is <code>scram-sha-256</code> by default — no <code>pg_hba.conf</code> editing needed.</p>
+<blockquote>
 <p>[!TIP]
-<strong>GUI clients:</strong> Use <strong>DBeaver</strong> (<code>sudo dnf install dbeaver</code>) or the PostgreSQL extension in VS Code/Cursor for a visual interface.</p>
+<strong>GUI clients:</strong> Use <strong>DBeaver</strong> (<code>sudo dnf install dbeaver</code>) or the PostgreSQL extension in VS Code/Cursor for a visual interface. Connection string: <code>postgresql://daniel:your_password@127.0.0.1:5432/mydb</code></p>
 </blockquote>
 <hr />
 <h2>Step 20 — MongoDB (Podman container)</h2>
 <p>MongoDB Inc. dropped Fedora support in 2019. The cleanest way to run it is in a rootless Podman container using <strong>Quadlet</strong> (a feature built directly into Fedora's pre-installed Podman engine). This allows the container to be managed exactly like a native systemd service — no extra downloads required.</p>
 <pre><code class="language-bash"># Create persistent data directory
-mkdir -p ~/mongodb-data
+mkdir -p ~/Database-data/mongodb
 </code></pre>
 <p>Create the Quadlet file at <code>~/.config/containers/systemd/mongodb.container</code>:</p>
 <pre><code class="language-ini">[Unit]
@@ -446,14 +478,11 @@ After=network-online.target
 Image=docker.io/library/mongo:latest
 ContainerName=mongodb
 PublishPort=127.0.0.1:27017:27017
-Volume=%h/mongodb-data:/data/db:Z
+Volume=%h/Database-data/mongodb:/data/db:Z
 Environment=MONGO_INITDB_ROOT_USERNAME=admin MONGO_INITDB_ROOT_PASSWORD=SuperSecretPassword
 
 [Service]
 Restart=always
-
-[Install]
-WantedBy=default.target
 </code></pre>
 <pre><code class="language-bash"># Activate the service
 systemctl --user daemon-reload
@@ -466,7 +495,7 @@ Change <code>SuperSecretPassword</code> to something real. The <code>:Z</code> S
 <h4>Optional: On-Demand MongoDB</h4>
 <p>Leaving the MongoDB container always running uses ~200-300MB of idle RAM. If you prefer a leaner system when not developing, you can manage it manually:</p>
 <ul>
-<li><strong>Where are my files?</strong> All of your raw database files are stored natively in your home folder at <code>~/mongodb-data</code>. Because we mapped this volume, your data persists even if the container is deleted or updated.</li>
+<li><strong>Where are my files?</strong> All of your raw database files are stored natively in your home folder at <code>~/Database-data/mongodb</code>. Because we mapped this volume, your data persists even if the container is deleted or updated.</li>
 <li><strong>Start when needed:</strong> <code>systemctl --user start mongodb</code></li>
 <li><strong>Stop when done:</strong> <code>systemctl --user stop mongodb</code></li>
 <li><strong>Enable auto-start on boot with:</strong> <code>systemctl --user enable mongodb</code></li>
@@ -480,7 +509,79 @@ Change <code>SuperSecretPassword</code> to something real. The <code>:Z</code> S
 <li><strong>From GUI tools / App code:</strong> Connect via standard connection string <code>mongodb://admin:SuperSecretPassword@127.0.0.1:27017</code> using an app like <strong>MongoDB Compass</strong> or VS Code extensions.</li>
 </ul>
 <hr />
-<h2>Step 21 — Flatpak Apps</h2>
+<h2>Step 21 — Multi-Account Git Setup (Workspaces + SSH)</h2>
+<p>Quick config to separate personal and work/university repositories by folder — no manual account switching needed.</p>
+<p><strong>1. Generate SSH keys:</strong></p>
+<pre><code class="language-bash">ssh-keygen -t ed25519 -C "personal@email.com" -f ~/.ssh/id_ed25519_personal
+ssh-keygen -t ed25519 -C "work@fhnw.ch" -f ~/.ssh/id_ed25519_work
+</code></pre>
+<p>Add the public keys (<code>.pub</code>) to the respective profiles:</p>
+<ul>
+<li><code>~/.ssh/id_ed25519_personal.pub</code> → GitHub → <strong>Settings → SSH and GPG Keys</strong></li>
+<li><code>~/.ssh/id_ed25519_work.pub</code> → GitLab → <strong>Preferences → SSH Keys</strong></li>
+</ul>
+<p><strong>2. Route keys by host (<code>~/.ssh/config</code>):</strong></p>
+<p>Create or edit <code>~/.ssh/config</code> (ensure permissions with <code>chmod 600 ~/.ssh/config</code>):</p>
+<pre><code class="language-text">Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519_personal
+    IdentitiesOnly yes
+
+Host gitlab.fhnw.ch
+    HostName gitlab.fhnw.ch
+    User git
+    IdentityFile ~/.ssh/id_ed25519_work
+    IdentitiesOnly yes
+</code></pre>
+<p><strong>3. Create project directories:</strong></p>
+<pre><code class="language-bash">mkdir -p ~/Projects/Personal ~/Projects/Work
+</code></pre>
+<p><strong>4. Git config with conditional includes:</strong></p>
+<p><code>~/.gitconfig</code> (main):</p>
+<pre><code class="language-ini">[core]
+    editor = nano
+
+[user]
+    name = Your Name
+    email = personal@email.com
+
+[includeIf "gitdir:~/Projects/Personal/"]
+    path = ~/.gitconfig-personal
+
+[includeIf "gitdir:~/Projects/Work/"]
+    path = ~/.gitconfig-work
+</code></pre>
+<p><code>~/.gitconfig-personal</code>:</p>
+<pre><code class="language-ini">[user]
+    email = personal@email.com
+</code></pre>
+<p><code>~/.gitconfig-work</code>:</p>
+<pre><code class="language-ini">[user]
+    email = work@fhnw.ch
+</code></pre>
+<p><strong>5. Install platform CLIs:</strong></p>
+<pre><code class="language-bash">sudo dnf install gh glab -y
+gh auth login
+glab auth login --hostname gitlab.fhnw.ch
+</code></pre>
+<p><strong>6. Verify:</strong></p>
+<pre><code class="language-bash"># Test SSH authentication
+ssh -T git@github.com
+ssh -T git@gitlab.fhnw.ch
+
+# Test email override — init a repo inside a target folder and check:
+cd ~/Projects/Work &amp;&amp; git init test &amp;&amp; cd test
+git config user.email   # Should show work@fhnw.ch
+cd ~ &amp;&amp; rm -rf ~/Projects/Work/test
+</code></pre>
+<blockquote>
+<p>[!TIP]
+Git's <code>includeIf "gitdir:"</code> matches any repo <strong>inside</strong> that directory tree. As long as you clone work repos into <code>~/Projects/Work/</code> and personal repos into <code>~/Projects/Personal/</code>, the correct identity is applied automatically.</p>
+</blockquote>
+
+<hr />
+<h2>Step 22 — Flatpak Apps</h2>
 <pre><code class="language-bash">flatpak install flathub net.davidotek.pupgui2 -y          # ProtonUp-Qt
 flatpak install flathub org.kde.krita -y                   # Krita
 flatpak install flathub com.discordapp.Discord -y          # Discord
@@ -490,7 +591,16 @@ flatpak install flathub org.localsend.localsend_app -y     # LocalSend
 flatpak install flathub com.rtosta.zapzap -y               # WhatsApp (ZapZap wrapper)
 flatpak install flathub org.videolan.VLC -y                # VLC Media Player
 flatpak install flathub com.obsproject.Studio -y           # OBS Studio
+flatpak install flathub io.gitlab.librewolf-community -y    # LibreWolf
+flatpak install flathub org.torproject.torbrowser-launcher -y # Tor Browser
+flatpak install flathub org.mozilla.Thunderbird -y           # Thunderbird (Email)
+flatpak install flathub us.zoom.Zoom -y                      # Zoom
+flatpak install flathub com.github.IsmaelMartinez.teams_for_linux -y # Microsoft Teams (community wrapper)
 </code></pre>
+<blockquote>
+<p>[!NOTE]
+<strong>Microsoft Teams:</strong> The community <code>teams-for-linux</code> wrapper packages the Teams web app as a standalone desktop application. Microsoft does not ship an official Linux client — if you prefer the official experience, you can also install Teams as a Progressive Web App (PWA) directly from your browser.</p>
+</blockquote>
 <blockquote>
 <p>[!NOTE]
 The Blender Flatpak cannot use AMD ROCm/HIP for GPU rendering due to sandbox restrictions. If you want to render with your RX 9070 XT, install Blender natively instead:
@@ -504,51 +614,31 @@ sudo firewall-cmd --add-port=53317/udp --permanent
 sudo firewall-cmd --reload
 </code></pre>
 <hr />
-<h2>Step 22 — OBS Studio (RPM)</h2>
-<p>For OBS Studio, the native RPM version is highly recommended over the Flatpak. The RPM version has direct access to your already-configured system drivers and codecs, meaning hardware encoding (VA-API H.264/HEVC/AV1) and screen capture work perfectly out of the box without complex runtime version juggling.</p>
-<pre><code class="language-bash">sudo dnf install obs-studio -y
-</code></pre>
-<hr />
-<h2>Step 23 — Lian Li Linux (build from source)</h2>
-<pre><code class="language-bash"># Install build dependencies
-sudo dnf install hidapi-devel libusb1-devel fontconfig-devel \
-  libxkbcommon-devel wayland-devel libX11-devel libinput-devel libdrm-devel \
-  mesa-libGL-devel mesa-libEGL-devel clang cmake pkg-config ffmpeg \
-  ffmpeg-devel nasm cargo rust git -y
+<h2>Step 23 — Lian Li Linux (COPR)</h2>
+<p>Instead of compiling from source, we can now use the official RPM Fusion and COPR repositories for a much cleaner installation. This handles all dependencies, udev rules, and systemd services automatically.</p>
+<pre><code class="language-bash"># Ensure RPM Fusion is enabled (if not already)
+sudo dnf install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
 
-# Clone and build
-git clone --recurse-submodules https://github.com/sgtaziz/lian-li-linux.git ~/lian-li-linux
-cd ~/lian-li-linux
-cargo build --release
-</code></pre>
-<pre><code class="language-bash"># Install udev rules (required for USB access without root)
-sudo cp packaging/udev/99-lianli.rules /etc/udev/rules.d/
-sudo udevadm control --reload-rules
-sudo udevadm trigger
+# Enable the Lian Li Linux COPR repository
+sudo dnf copr enable sgtaziz/lian-li-linux
 
-# Fix hardcoded paths in the service and desktop files
-sed -i 's|/usr/bin/lianli|/usr/local/bin/lianli|g' packaging/systemd/lianli-daemon.service
-sed -i 's|Exec=lianli-gui|Exec=/usr/local/bin/lianli-gui|g' packaging/desktop/com.sgtaziz.lianlilinux.desktop
-sed -i 's|/usr/bin/lianli|/usr/local/bin/lianli|g' packaging/desktop/com.sgtaziz.lianlilinux.desktop
-
-# Install binaries to /usr/local/bin (safest for custom compiled software)
-sudo install -Dm755 target/release/lianli-daemon /usr/local/bin/lianli-daemon
-sudo install -Dm755 target/release/lianli-gui /usr/local/bin/lianli-gui
-
-# Install and start the systemd user service
-sudo install -Dm644 packaging/systemd/lianli-daemon.service /usr/lib/systemd/user/lianli-daemon.service
-systemctl --user daemon-reload
-systemctl --user enable --now lianli-daemon.service
+# Install the software
+sudo dnf install lian-li-linux
 </code></pre>
-<pre><code class="language-bash"># Install desktop entry and icons so it appears in KDE app launcher
-for size in 32x32 128x128 256x256 scalable; do mkdir -p ~/.local/share/icons/hicolor/$size/apps; done
-cp assets/icons/32x32.png ~/.local/share/icons/hicolor/32x32/apps/com.sgtaziz.lianlilinux.png
-cp assets/icons/128x128.png ~/.local/share/icons/hicolor/128x128/apps/com.sgtaziz.lianlilinux.png
-cp assets/icons/128x128@2x.png ~/.local/share/icons/hicolor/256x256/apps/com.sgtaziz.lianlilinux.png
-cp assets/icons/icon.svg ~/.local/share/icons/hicolor/scalable/apps/com.sgtaziz.lianlilinux.svg
-cp packaging/desktop/com.sgtaziz.lianlilinux.desktop ~/.local/share/applications/
-update-desktop-database ~/.local/share/applications/
-</code></pre>
+<blockquote>
+<p>[!NOTE]
+The daemon should start automatically. You can launch <code>Lian Li Linux</code> from your KDE application launcher to configure your fans, pump, and LCD screen.</p>
+</blockquote>
+<blockquote>
+<p>[!TIP]
+<strong>Optional: Screen-Only Mode (Motherboard Sync)</strong><br>
+If you prefer to manage your fan curves in the BIOS and your RGB in OpenRGB, you can configure the Lian Li app to <em>only</em> manage the LCD screen:</p>
+<ol>
+<li>Ensure the Lian Li controller's PWM and ARGB cables are connected to your motherboard headers.</li>
+<li>Open the <strong>Lian Li Linux</strong> GUI and enable <strong>MB Sync</strong> (Motherboard Sync) for both Fans and Lighting.</li>
+<li>The app will now act strictly as a screen driver, letting your BIOS and OpenRGB handle the rest.</li>
+</ol>
+</blockquote>
 <hr />
 <h2>Step 24 — DaVinci Resolve 21.0 (in Distrobox)</h2>
 <p><strong>Before starting:</strong> download the DaVinci Resolve 21.0 <code>.run</code> installer from <a href="https://www.blackmagicdesign.com/products/davinciresolve">blackmagicdesign.com</a>.<br>
@@ -678,15 +768,52 @@ mv ~/Downloads/LM-Studio-*.AppImage ~/.local/bin/lm-studio.appimage
 LM Studio will now automatically detect your AMD GPU via ROCm. Your Ryzen 7 7800X3D and RX 9070 XT can handle 7B-13B parameter models at lightning speeds. For larger models (30B+), you'd want more RAM (32GB+ recommended).</p>
 </blockquote>
 <hr />
+<h2>Step 29 — Ollama (AI Model Server for Remote Access)</h2>
+<p>Turns your Fedora PC into an AI inference server that any device on your Tailscale network can connect to — including Cherry Studio on your Mac.</p>
+<pre><code class="language-bash"># Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+</code></pre>
+<p><strong>Expose Ollama to your Tailscale network:</strong></p>
+<p>By default, Ollama only listens on <code>localhost</code>. To allow your other devices (like your Mac) to connect through Tailscale, override the bind address:</p>
+<pre><code class="language-bash">sudo systemctl edit ollama.service
+</code></pre>
+<p>Add these lines in the editor:</p>
+<pre><code class="language-ini">[Service]
+Environment="OLLAMA_HOST=0.0.0.0"
+</code></pre>
+<pre><code class="language-bash">sudo systemctl daemon-reload
+sudo systemctl restart ollama
+</code></pre>
+<p><strong>Download a model to test with:</strong></p>
+<pre><code class="language-bash"># Download and chat (type /bye to exit)
+ollama run llama3.1
+</code></pre>
+<blockquote>
+<p>[!NOTE]
+<strong>No firewall rules needed!</strong> Because your Tailscale zone is set to <code>ACCEPT</code> (Step 16), Ollama's port <code>11434</code> is automatically accessible to all your Tailscale devices. Your main network remains fully locked down.</p>
+</blockquote>
+<p><strong>Connect from your Mac (or any Tailscale device):</strong></p>
+<ol>
+<li>Make sure <strong>Tailscale</strong> is running on both your Fedora PC and your Mac.</li>
+<li>Get your Fedora PC's Tailscale IP: <code>tailscale ip -4</code> (outputs a <code>100.x.x.x</code> address).</li>
+<li>Open <strong>Cherry Studio</strong> on your Mac → <strong>Settings</strong> → <strong>Providers</strong> → <strong>Ollama</strong>.</li>
+<li>Set the API URL to <code>http://100.x.x.x:11434</code> (replace with your actual Tailscale IP).</li>
+<li>Click <strong>Check</strong> — it will connect through the Tailscale tunnel and pull your available models.</li>
+</ol>
+<p>You can now chat with local AI models from your Mac, with all the heavy GPU processing happening silently on your Fedora PC.</p>
+<hr />
 <h2>Step 30 — Verify everything works</h2>
 <p>Final check for databases, creative applications, and system health:</p>
-<pre><code class="language-bash"># PostgreSQL running and queryable?
-sudo systemctl status postgresql
-psql -U daniel -d mydb -c &quot;SELECT version();&quot;
+<pre><code class="language-bash"># PostgreSQL container running and queryable?
+systemctl --user status postgres
+podman exec -it postgres psql -U daniel -d mydb -c &quot;SELECT version();&quot;
 
 # MongoDB container running and responsive?
 systemctl --user status mongodb
 podman exec -it mongodb mongosh -u admin -p --eval &quot;db.runCommand({ping:1})&quot;
+
+# Ollama responding?
+curl -s http://localhost:11434/api/tags | head
 
 # All background services healthy?
 systemctl status lactd
@@ -783,8 +910,8 @@ sudo snapper -c root list
 </tr>
 <tr>
 <td style="text-align: left;">PostgreSQL</td>
-<td style="text-align: left;">DNF</td>
-<td style="text-align: left;">Standards-compliant relational database</td>
+<td style="text-align: left;">Podman Quadlet</td>
+<td style="text-align: left;">Security-hardened relational database, no auto-start</td>
 </tr>
 <tr>
 <td style="text-align: left;">MongoDB</td>
@@ -792,9 +919,14 @@ sudo snapper -c root list
 <td style="text-align: left;">NoSQL database, containerized with systemd user service</td>
 </tr>
 <tr>
-<td style="text-align: left;">Flatpak Apps (OBS, VLC, Blender, Krita, etc.)</td>
+<td style="text-align: left;">Multi-Account Git</td>
+<td style="text-align: left;">SSH + gitconfig</td>
+<td style="text-align: left;">Workspace-based identity switching for personal/work repos</td>
+</tr>
+<tr>
+<td style="text-align: left;">Flatpak Apps (OBS, VLC, Krita, LibreWolf, Zoom, etc.)</td>
 <td style="text-align: left;">Flatpak</td>
-<td style="text-align: left;">Self-contained productivity, media &amp; communication apps</td>
+<td style="text-align: left;">Self-contained productivity, media, communication &amp; privacy apps</td>
 </tr>
 <tr>
 <td style="text-align: left;">Lian Li Linux</td>
@@ -826,6 +958,11 @@ sudo snapper -c root list
 <td style="text-align: left;">AppImage + Gearlever</td>
 <td style="text-align: left;">Run open-source AI models locally, offline</td>
 </tr>
+<tr>
+<td style="text-align: left;">Ollama</td>
+<td style="text-align: left;">DNF (Ollama script)</td>
+<td style="text-align: left;">AI model server, accessible from all Tailscale devices</td>
+</tr>
 </tbody>
 </table>
 
@@ -838,8 +975,7 @@ sudo snapper -c root list
 │   ├── dnf/libdnf5-plugins/actions.d/snapper.actions &lt;-- Snapper pre/post hooks
 │   ├── default/grub-btrfs     &lt;-- OverlayFS kernel parameter config
 │   ├── udev/rules.d/          &lt;-- Hardware permissions
-│   │   ├── 99-lact.rules      &lt;-- GPU overclocking permissions
-│   │   └── 99-lianli.rules    &lt;-- Lian Li USB fan controller access
+│   │   └── 99-lact.rules      &lt;-- GPU overclocking permissions
 │   └── updatedb.conf          &lt;-- Blocked locate from indexing snapshots
 │
 ├── usr/                       &lt;-- System-wide installed software (DNF)
@@ -847,16 +983,14 @@ sudo snapper -c root list
 │   │   ├── distrobox          &lt;-- Container manager
 │   │   ├── docker             &lt;-- Global Docker daemon
 │   │   ├── tailscale          &lt;-- VPN daemon
-│   │   ├── psql               &lt;-- PostgreSQL database client
 │   │   ├── openrgb            &lt;-- Motherboard/RAM RGB controller
 │   │   ├── code               &lt;-- VS Code Editor
 │   │   ├── 7z / unrar         &lt;-- Archive tools
 │   │   ├── inkscape           &lt;-- Vector graphics editor
 │   │   ├── gamemoded / mangohud / gamescope &lt;-- Gaming performance tools
-│   │   └── VirtualBox         &lt;-- Virtual machine manager
-│   │
-│   ├── local/bin/
-│   │   └── lianli-daemon / lianli-gui &lt;-- Fan controller (compiled from source)
+│   │   ├── VirtualBox         &lt;-- Virtual machine manager
+│   │   ├── ollama             &lt;-- Local AI model server
+│   │   └── lianli-daemon / lianli-gui &lt;-- Fan controller (COPR package)
 │   │
 │   ├── share/fonts/           &lt;-- MS Core &amp; Google Fonts
 │   │
@@ -866,7 +1000,6 @@ sudo snapper -c root list
 │
 ├── var/                       &lt;-- System variable data
 │   ├── lib/docker/            &lt;-- Docker (system-level) containers/volumes
-│   ├── lib/pgsql/data/        &lt;-- PostgreSQL database files
 │   └── lib/flatpak/           &lt;-- System-wide Flatpak storage
 │       └── app/
 │           ├── it.mijorus.gearlever/  &lt;-- Gearlever
@@ -881,14 +1014,20 @@ sudo snapper -c root list
 
 
 /home/$USER/ (Home Btrfs Subvolume)
+├── .gitconfig                 &lt;-- Main Git config with conditional includes
+├── .gitconfig-personal        &lt;-- Personal email override
+├── .gitconfig-work            &lt;-- Work email override
+├── .ssh/                      &lt;-- SSH keys
+│   ├── id_ed25519_personal    &lt;-- GitHub SSH key
+│   └── id_ed25519_work        &lt;-- GitLab (gitlab.fhnw.ch) SSH key
 ├── .config/                   &lt;-- User-specific configurations
 │   ├── containers/systemd/
-│   │   └── mongodb.container  &lt;-- Podman Quadlet (auto-starts MongoDB)
+│   │   ├── mongodb.container  &lt;-- Podman Quadlet (manages MongoDB container)
+│   │   └── postgres.container &lt;-- Podman Quadlet (manages PostgreSQL container)
 │   ├── openrgb/               &lt;-- OpenRGB lighting profiles
 │   ├── sunshine/              &lt;-- Sunshine streaming config
 │   └── systemd/user/
-│       ├── sunshine.service   &lt;-- Sunshine auto-start
-│       └── lianli-daemon.service &lt;-- Lian Li user daemon
+│       └── sunshine.service   &lt;-- Sunshine auto-start
 │
 ├── .local/                    &lt;-- User-specific software and data
 │   ├── bin/
@@ -908,7 +1047,15 @@ sudo snapper -c root list
 │   ├── setup.sh
 │   └── aac_encoder_plugin/    &lt;-- AAC plugin script
 │
-├── lian-li-linux/             &lt;-- Git clone for fan controller source code
+├── .ollama/                   &lt;-- Ollama model storage (downloaded AI models)
+│
+├── Montage/                   &lt;-- DaVinci Resolve editing folder (auto-converts AAC audio)
+├── Database-data/             &lt;-- Persistent database storage
+│   ├── mongodb/               &lt;-- MongoDB raw files
+│   └── postgres/              &lt;-- PostgreSQL raw files
+├── Projects/                  &lt;-- Git workspace root
+│   ├── Personal/              &lt;-- Personal GitHub repos (uses personal SSH key)
+│   └── Work/                  &lt;-- Work/university GitLab repos (uses work SSH key)
 │
 └── VirtualBox VMs/            &lt;-- Virtual machine virtual disks
 </code></pre>
