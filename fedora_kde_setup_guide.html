@@ -33,55 +33,65 @@ pre:hover .copy-btn { opacity: 1; }
 
 
 
+
+.markdown-body div.note, .markdown-body div.tip, .markdown-body div.important, .markdown-body div.warning, .markdown-body div.caution {
+  padding: 0.5em 1em; margin: 16px 0; border-left: 4px solid #0969da; border-radius: 6px; background: rgba(127,127,127,0.08);
+}
+.markdown-body div.tip { border-left-color: #1a7f37; }
+.markdown-body div.important { border-left-color: #8250df; }
+.markdown-body div.warning { border-left-color: #9a6700; }
+.markdown-body div.caution { border-left-color: #cf222e; }
+.markdown-body div.note > .title, .markdown-body div.tip > .title, .markdown-body div.important > .title,
+.markdown-body div.warning > .title, .markdown-body div.caution > .title { font-weight: 600; }
 </style>
 </head>
 <body class="markdown-body">
-<h1>Fedora 44 KDE 6.7 — Complete Post-Install Guide</h1>
-<p><strong>Hardware:</strong> AMD Ryzen 7 7800X3D + AMD Radeon RX 9070 XT (RDNA 4)
-<strong>System:</strong> Fedora 44 KDE Plasma 6.7</p>
+<h1 id="fedora-44-kde-67--complete-post-install-guide">Fedora 44 KDE 6.7
+— Complete Post-Install Guide</h1>
+<p><strong>Hardware:</strong> AMD Ryzen 7 7800X3D + AMD Radeon RX 9070
+XT (RDNA 4) <strong>System:</strong> Fedora 44 KDE Plasma 6.7</p>
 <hr />
-<h2>Step 0 — DNF configuration</h2>
+<h2 id="step-0--dnf-configuration">Step 0 — DNF configuration</h2>
 <p>Makes everything faster. Do this first.</p>
-<pre><code class="language-bash">sudo nano /etc/dnf/dnf.conf
-</code></pre>
+<pre class="bash"><code>sudo nano /etc/dnf/dnf.conf</code></pre>
 <p>Add under <code>[main]</code>:</p>
-<pre><code class="language-ini">max_parallel_downloads=10
+<pre class="ini"><code>max_parallel_downloads=10
 defaultyes=True
-keepcache=True
-</code></pre>
+keepcache=True</code></pre>
 <hr />
-<h2>Step 1 — System update + RPM Fusion</h2>
-<pre><code class="language-bash">sudo dnf upgrade --refresh -y
+<h2 id="step-1--system-update--rpm-fusion">Step 1 — System update + RPM
+Fusion</h2>
+<pre class="bash"><code>sudo dnf upgrade --refresh -y
 
 sudo dnf install \
   https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
   https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm \
-  -y
-</code></pre>
-<blockquote>
-<p>[!WARNING]
-<strong>Fedora 44 RPM Fusion bug:</strong> the release package may enable Rawhide repo by mistake. Check:
-<code>bash
-sudo dnf repolist --all | grep -i fusion</code>
-If you see <code>rpmfusion-free-rawhide</code> enabled, fix it:
-<code>bash
-sudo dnf config-manager setopt rpmfusion-free.enabled=1
+  -y</code></pre>
+<div class="warning">
+<div class="title">
+<p>Warning</p>
+</div>
+<p><strong>Fedora 44 RPM Fusion bug:</strong> the release package may
+enable Rawhide repo by mistake. Check:</p>
+<pre class="bash"><code>sudo dnf repolist --all | grep -i fusion</code></pre>
+<p>If you see <code>rpmfusion-free-rawhide</code> enabled, fix it:</p>
+<pre class="bash"><code>sudo dnf config-manager setopt rpmfusion-free.enabled=1
 sudo dnf config-manager setopt rpmfusion-free-updates.enabled=1
-sudo dnf config-manager setopt rpmfusion-free-rawhide.enabled=0</code></p>
-</blockquote>
-<pre><code class="language-bash">sudo dnf upgrade --refresh -y
-sudo dnf group upgrade core -y
-</code></pre>
+sudo dnf config-manager setopt rpmfusion-free-rawhide.enabled=0</code></pre>
+</div>
+<pre class="bash"><code>sudo dnf upgrade --refresh -y
+sudo dnf group upgrade core -y</code></pre>
 <hr />
-<h2>Step 2 — Btrfs snapshots (safety net)</h2>
+<h2 id="step-2--btrfs-snapshots-safety-net">Step 2 — Btrfs snapshots
+(safety net)</h2>
 <p>If anything goes wrong — reboot, pick a snapshot from GRUB, done.</p>
-<pre><code class="language-bash">sudo dnf install snapper libdnf5-plugin-actions btrfs-assistant inotify-tools git make -y
+<pre class="bash"><code>sudo dnf install snapper libdnf5-plugin-actions btrfs-assistant inotify-tools git make -y
 
-sudo bash -c &quot;cat &gt; /etc/dnf/libdnf5-plugins/actions.d/snapper.actions&quot; &lt;&lt;'EOF'
+sudo bash -c &quot;cat &gt; /etc/dnf/libdnf5-plugins/actions.d/snapper.actions&quot; &lt;&lt;&#39;EOF&#39;
 # Get snapshot description
-pre_transaction::::/usr/bin/sh -c echo\ &quot;tmp.cmd=$(ps\ -o\ command\ --no-headers\ -p\ '${pid}')&quot;
+pre_transaction::::/usr/bin/sh -c echo\ &quot;tmp.cmd=$(ps\ -o\ command\ --no-headers\ -p\ &#39;${pid}&#39;)&quot;
 # Creates pre snapshot before the transaction and stores the snapshot number in the &quot;tmp.snapper_pre_number&quot; variable.
-pre_transaction::::/usr/bin/sh -c echo\ &quot;tmp.snapper_pre_number=$(snapper\ create\ -t\ pre\ -c\ number\ -p\ -d\ '${tmp.cmd}')&quot;
+pre_transaction::::/usr/bin/sh -c echo\ &quot;tmp.snapper_pre_number=$(snapper\ create\ -t\ pre\ -c\ number\ -p\ -d\ &#39;${tmp.cmd}&#39;)&quot;
 # If the variable &quot;tmp.snapper_pre_number&quot; exists, it creates post snapshot after the transaction and removes the variable &quot;tmp.snapper_pre_number&quot;.
 post_transaction::::/usr/bin/sh -c [\ -n\ &quot;${tmp.snapper_pre_number}&quot;\ ]\ &amp;&amp;\ snapper\ create\ -t\ post\ --pre-number\ &quot;${tmp.snapper_pre_number}&quot;\ -c\ number\ -d\ &quot;${tmp.cmd}&quot;\ ;\ echo\ tmp.snapper_pre_number\ ;\ echo\ tmp.cmd
 EOF
@@ -90,20 +100,20 @@ sudo snapper -c root create-config /
 sudo restorecon -RFv /.snapshots
 sudo snapper -c root set-config ALLOW_USERS=$USER SYNC_ACL=yes
 
-echo 'PRUNENAMES = &quot;.snapshots&quot;' | sudo tee -a /etc/updatedb.conf
+echo &#39;PRUNENAMES = &quot;.snapshots&quot;&#39; | sudo tee -a /etc/updatedb.conf
 
 git clone https://github.com/Antynea/grub-btrfs
 cd grub-btrfs
 
 sed -i.bkp \
--e '/^#GRUB_BTRFS_SNAPSHOT_KERNEL_PARAMETERS=/a \
-GRUB_BTRFS_SNAPSHOT_KERNEL_PARAMETERS=&quot;rd.live.overlay.overlayfs=1&quot;' \
--e '/^#GRUB_BTRFS_GRUB_DIRNAME=/a \
-GRUB_BTRFS_GRUB_DIRNAME=&quot;/boot/grub2&quot;' \
--e '/^#GRUB_BTRFS_MKCONFIG=/a \
-GRUB_BTRFS_MKCONFIG=/usr/bin/grub2-mkconfig' \
--e '/^#GRUB_BTRFS_SCRIPT_CHECK=/a \
-GRUB_BTRFS_SCRIPT_CHECK=grub2-script-check' \
+-e &#39;/^#GRUB_BTRFS_SNAPSHOT_KERNEL_PARAMETERS=/a \
+GRUB_BTRFS_SNAPSHOT_KERNEL_PARAMETERS=&quot;rd.live.overlay.overlayfs=1&quot;&#39; \
+-e &#39;/^#GRUB_BTRFS_GRUB_DIRNAME=/a \
+GRUB_BTRFS_GRUB_DIRNAME=&quot;/boot/grub2&quot;&#39; \
+-e &#39;/^#GRUB_BTRFS_MKCONFIG=/a \
+GRUB_BTRFS_MKCONFIG=/usr/bin/grub2-mkconfig&#39; \
+-e &#39;/^#GRUB_BTRFS_SCRIPT_CHECK=/a \
+GRUB_BTRFS_SCRIPT_CHECK=grub2-script-check&#39; \
 config
 
 sudo make install
@@ -114,73 +124,85 @@ rm -rfv grub-btrfs
 sudo systemctl enable --now snapper-timeline.timer
 sudo systemctl enable --now snapper-cleanup.timer
 
-sudo grub2-editenv - unset menu_auto_hide
-</code></pre>
-<p>From now on, snapshots are created automatically every hour, and before/after every <code>dnf</code> transaction.</p>
-<h4>How to roll back if your system breaks:</h4>
-<ol>
+sudo grub2-editenv - unset menu_auto_hide</code></pre>
+<p>From now on, snapshots are created automatically every hour, and
+before/after every <code>dnf</code> transaction.</p>
+<p><strong>How to roll back if your system breaks:</strong></p>
+<ol type="1">
 <li><strong>Reboot your PC.</strong></li>
-<li>In the <strong>GRUB boot menu</strong>, select "Fedora Linux snapshots" and boot into a recent working snapshot.</li>
-<li>Once you reach the desktop, open the <strong>Btrfs Assistant</strong> application.</li>
-<li>Go to the <strong>Snapper</strong> tab ➔ <strong>Browse/Restore</strong>.</li>
+<li>In the <strong>GRUB boot menu</strong>, select "Fedora Linux
+snapshots" and boot into a recent working snapshot.</li>
+<li>Once you reach the desktop, open the <strong>Btrfs
+Assistant</strong> application.</li>
+<li>Go to the <strong>Snapper</strong> tab ➔
+<strong>Browse/Restore</strong>.</li>
 <li>Set "Select target" to the <code>root</code> subvolume.</li>
-<li>Select the snapshot you want to revert to and click <strong>Restore</strong>.</li>
-<li>Click Yes to confirm, then <strong>reboot</strong> immediately to permanently apply the rollback. Your personal files (in <code>/home</code>) will be completely unaffected!</li>
+<li>Select the snapshot you want to revert to and click
+<strong>Restore</strong>.</li>
+<li>Click Yes to confirm, then <strong>reboot</strong> immediately to
+permanently apply the rollback. Your personal files (in
+<code>/home</code>) will be completely unaffected!</li>
 </ol>
 <hr />
-<h2>Step 3 — Mesa freeworld, codecs, &amp; ROCm compute</h2>
-<p>Replace Fedora's stripped-down Mesa and ffmpeg with full versions, and install the AMD compute stack for AI and 3D rendering.</p>
-<pre><code class="language-bash">sudo dnf swap mesa-va-drivers mesa-va-drivers-freeworld -y
+<h2 id="step-3--mesa-freeworld-codecs--rocm-compute">Step 3 — Mesa
+freeworld, codecs, &amp; ROCm compute</h2>
+<p>Replace Fedora's stripped-down Mesa and ffmpeg with full versions,
+and install the AMD compute stack for AI and 3D rendering.</p>
+<pre class="bash"><code>sudo dnf swap mesa-va-drivers mesa-va-drivers-freeworld -y
 sudo dnf swap mesa-vdpau-drivers mesa-vdpau-drivers-freeworld -y
 sudo dnf swap ffmpeg-free ffmpeg --allowerasing -y
 sudo dnf group upgrade multimedia -y
 sudo dnf install libva-utils vdpauinfo gstreamer1-plugins-bad-freeworld gstreamer1-plugins-ugly gstreamer1-libav -y
 
 # Install AMD ROCm compute stack (HIP &amp; OpenCL)
-sudo dnf install rocm-hip rocm-opencl rocminfo -y
-</code></pre>
+sudo dnf install rocm-hip rocm-opencl rocminfo -y</code></pre>
 <hr />
-<h2>Step 4 — Firmware updates</h2>
+<h2 id="step-4--firmware-updates">Step 4 — Firmware updates</h2>
 <p>Updates motherboard/SSD/GPU firmware through Linux.</p>
-<pre><code class="language-bash">fwupdmgr refresh --force
+<pre class="bash"><code>fwupdmgr refresh --force
 fwupdmgr get-updates
-fwupdmgr update
-</code></pre>
+fwupdmgr update</code></pre>
 <hr />
-<h2>Step 5 — Unlock amdgpu overclocking + LACT</h2>
-<pre><code class="language-bash"># Unlock power management for undervolting/overclocking
+<h2 id="step-5--unlock-amdgpu-overclocking--lact">Step 5 — Unlock amdgpu
+overclocking + LACT</h2>
+<pre class="bash"><code># Unlock power management for undervolting/overclocking
 sudo grubby --update-kernel=ALL --args=&quot;amdgpu.ppfeaturemask=0xffffffff&quot;
 
 # Install LACT
 sudo dnf install dnf5-plugins -y
-sudo dnf copr enable ianyar/lact -y
+sudo dnf copr enable ilyaz/LACT -y
 sudo dnf install lact -y
-sudo systemctl enable --now lactd
-</code></pre>
+sudo systemctl enable --now lactd</code></pre>
 <hr />
-<h2>Step 6 — Flatpak + KDE Discover</h2>
-<pre><code class="language-bash">flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+<h2 id="step-6--flatpak--kde-discover">Step 6 — Flatpak + KDE
+Discover</h2>
+<pre class="bash"><code>flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 flatpak install flathub org.freedesktop.Platform.ffmpeg-full -y
-sudo dnf install plasma-discover-backend-flatpak -y
-</code></pre>
-<p>If it asks you to pick a version for ffmpeg-full — just pick the latest one.</p>
+sudo dnf install plasma-discover-backend-flatpak -y</code></pre>
+<p>If it asks you to pick a version for ffmpeg-full — just pick the
+latest one.</p>
 <hr />
-<h2>Step 7 — AppImage Support &amp; Gearlever</h2>
-<p>To run <code>.AppImage</code> files, you need <code>fuse</code> (FUSE 2 compatibility):</p>
-<pre><code class="language-bash">sudo dnf install fuse -y
-</code></pre>
-<p>To easily manage AppImages (adding them to your KDE menu with proper icons), use <strong>Gearlever</strong>:</p>
-<pre><code class="language-bash">flatpak install flathub it.mijorus.gearlever -y
-</code></pre>
+<h2 id="step-7--appimage-support--gearlever">Step 7 — AppImage Support
+&amp; Gearlever</h2>
+<p>To run <code>.AppImage</code> files, you need <code>fuse</code> (FUSE
+2 compatibility):</p>
+<pre class="bash"><code>sudo dnf install fuse -y</code></pre>
+<p>To easily manage AppImages (adding them to your KDE menu with proper
+icons), use <strong>Gearlever</strong>:</p>
+<pre class="bash"><code>flatpak install flathub it.mijorus.gearlever -y</code></pre>
 <hr />
-<h2>Step 8 — Docker CE (alongside Podman)</h2>
-<p>Fedora ships Podman by default (uses Podman for Distrobox and MongoDB). Docker CE is installed separately for university coursework and full Docker Compose compatibility. Both coexist without conflict.</p>
-<pre><code class="language-bash"># Remove conflicting packages (if any)
+<h2 id="step-8--docker-ce-alongside-podman">Step 8 — Docker CE
+(alongside Podman)</h2>
+<p>Fedora ships Podman by default (uses Podman for Distrobox and
+MongoDB). Docker CE is installed separately for university coursework
+and full Docker Compose compatibility. Both coexist without
+conflict.</p>
+<pre class="bash"><code># Remove conflicting packages (if any)
 sudo dnf remove -y docker docker-client docker-client-latest docker-common \
   docker-latest docker-latest-logrotate docker-logrotate docker-selinux \
   docker-engine-selinux docker-engine moby-engine runc podman-docker
 
-# Add Docker's official Fedora repository
+# Add Docker&#39;s official Fedora repository
 sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
 
 # Install Docker CE
@@ -190,21 +212,33 @@ sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin d
 sudo usermod -aG docker $USER
 
 # Start Docker manually (do not enable it on boot for security)
-sudo systemctl start docker
-</code></pre>
-<blockquote>
-<p>[!NOTE]
-You now have <strong>both</strong> container runtimes:
-- <code>docker</code> — for university assignments, Docker Compose labs, team projects
-- <code>podman</code> — for personal containers (MongoDB, etc.), Distrobox, rootless security</p>
-<p>Log out and back in for the <code>docker</code> group to take effect.</p>
-<p><strong>Important:</strong> Docker's daemon runs as root and <strong>bypasses firewalld</strong> by injecting raw iptables rules. For security, Docker is NOT set to start on boot.
-- When you need to do coursework, run: <code>sudo systemctl start docker</code>
-- When you are finished, run: <code>sudo systemctl stop docker</code></p>
-</blockquote>
+sudo systemctl start docker</code></pre>
+<div class="note">
+<div class="title">
+<p>Note</p>
+</div>
+<p>You now have <strong>both</strong> container runtimes:</p>
+<ul>
+<li><code>docker</code> — for university assignments, Docker Compose
+labs, team projects</li>
+<li><code>podman</code> — for personal containers (MongoDB, etc.),
+Distrobox, rootless security</li>
+</ul>
+<p>Log out and back in for the <code>docker</code> group to take
+effect.</p>
+<p><strong>Important:</strong> Docker's daemon runs as root and
+<strong>bypasses firewalld</strong> by injecting raw iptables rules. For
+security, Docker is NOT set to start on boot.</p>
+<ul>
+<li>When you need to do coursework, run:
+<code>sudo systemctl start docker</code></li>
+<li>When you are finished, run:
+<code>sudo systemctl stop docker</code></li>
+</ul>
+</div>
 <hr />
-<h2>Step 9 — OpenRGB</h2>
-<pre><code class="language-bash">sudo dnf install openrgb i2c-tools -y
+<h2 id="step-9--openrgb">Step 9 — OpenRGB</h2>
+<pre class="bash"><code>sudo dnf install openrgb i2c-tools -y
 
 # Load AMD I2C modules
 sudo modprobe i2c-piix4
@@ -218,29 +252,37 @@ sudo groupadd --system i2c 2&gt;/dev/null
 sudo usermod $USER -aG i2c
 
 # Fix ACPI conflicts for motherboard/RAM RGB (ASUS/Gigabyte/ASRock)
-sudo grubby --update-kernel=ALL --args=&quot;acpi_enforce_resources=lax&quot;
-</code></pre>
-<blockquote>
-<p>[!WARNING]
-<strong>System Freezes (Kernel Panics):</strong> Using <code>acpi_enforce_resources=lax</code> allows OpenRGB to control motherboard and RAM lights, but it removes a safety lock on your motherboard's thermal sensors. If the system tries to read a temperature at the exact millisecond you change an RGB light, the collision will cause your PC to completely freeze.</p>
-<p><strong>What to do:</strong> If your PC locks up (screen freezes, buzzing audio), simply hold down your physical power button for 5 seconds to force a shut off, then turn it back on. No permanent damage is done, and everything will be back to normal.</p>
-</blockquote>
+sudo grubby --update-kernel=ALL --args=&quot;acpi_enforce_resources=lax&quot;</code></pre>
+<div class="warning">
+<div class="title">
+<p>Warning</p>
+</div>
+<p><strong>System Freezes (Kernel Panics):</strong> Using
+<code>acpi_enforce_resources=lax</code> allows OpenRGB to control
+motherboard and RAM lights, but it removes a safety lock on your
+motherboard's thermal sensors. If the system tries to read a temperature
+at the exact millisecond you change an RGB light, the collision will
+cause your PC to completely freeze.</p>
+<p><strong>What to do:</strong> If your PC locks up (screen freezes,
+buzzing audio), simply hold down your physical power button for 5
+seconds to force a shut off, then turn it back on. No permanent damage
+is done, and everything will be back to normal.</p>
+</div>
 <hr />
-<h2>Step 10 — Visual Studio Code</h2>
-<pre><code class="language-bash">sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+<h2 id="step-10--visual-studio-code">Step 10 — Visual Studio Code</h2>
+<pre class="bash"><code>sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
 
 echo -e &quot;[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\nautorefresh=1\ntype=rpm-md\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc&quot; | sudo tee /etc/yum.repos.d/vscode.repo &gt; /dev/null
 
 sudo dnf check-update
-sudo dnf install code -y
-</code></pre>
+sudo dnf install code -y</code></pre>
 <hr />
-<h2>Step 11 — Archivers</h2>
-<pre><code class="language-bash">sudo dnf install p7zip p7zip-plugins unrar -y
-</code></pre>
+<h2 id="step-11--archivers">Step 11 — Archivers</h2>
+<pre class="bash"><code>sudo dnf install p7zip p7zip-plugins unrar -y</code></pre>
 <hr />
-<h2>Step 12 — Microsoft &amp; Google Fonts (For Affinity &amp; Resolve)</h2>
-<pre><code class="language-bash">sudo dnf install curl cabextract mkfontscale fontconfig -y
+<h2 id="step-12--microsoft--google-fonts-for-affinity--resolve">Step 12
+— Microsoft &amp; Google Fonts (For Affinity &amp; Resolve)</h2>
+<pre class="bash"><code>sudo dnf install curl cabextract mkfontscale fontconfig -y
 
 # Install Microsoft Core Fonts (Arial, Times New Roman, etc.)
 curl -LO https://downloads.sourceforge.net/project/mscorefonts2/rpms/msttcore-fonts-installer-2.6-1.noarch.rpm
@@ -251,133 +293,316 @@ rm msttcore-fonts-installer-2.6-1.noarch.rpm
 sudo dnf install google-roboto-fonts google-noto-sans-fonts google-noto-serif-fonts -y
 
 # Rebuild the font cache so apps see them immediately
-sudo fc-cache -fv
-</code></pre>
+sudo fc-cache -fv</code></pre>
 <hr />
-<h2>Step 13 — Inkscape</h2>
-<p>Vector graphics editor. Native RPM is strongly recommended — the Flatpak version breaks Python extensions and can't access system tools (LaTeX, Ghostscript).</p>
-<pre><code class="language-bash">sudo dnf install inkscape -y
-</code></pre>
+<h2 id="step-13--inkscape">Step 13 — Inkscape</h2>
+<p>Vector graphics editor. Native RPM is strongly recommended — the
+Flatpak version breaks Python extensions and can't access system tools
+(LaTeX, Ghostscript).</p>
+<pre class="bash"><code>sudo dnf install inkscape -y</code></pre>
 <hr />
-<h2>Step 14 — Gaming</h2>
-<pre><code class="language-bash">sudo dnf install steam gamemode mangohud goverlay gamescope mesa-vulkan-drivers.i686 mesa-dri-drivers.i686 -y
-sudo dnf install mesa-va-drivers-freeworld.i686 mesa-vdpau-drivers-freeworld.i686 -y
-</code></pre>
-<h3>How to use these gaming utilities</h3>
-<p>To use these tools, right-click any game in Steam -&gt; <strong>Properties</strong> -&gt; <strong>Launch Options</strong>. 
-<em>(Note: You must literally type <code>%command%</code> at the end of your options. Steam automatically replaces this word with the game's executable).</em></p>
+<h2 id="step-14--gaming">Step 14 — Gaming</h2>
+<pre class="bash"><code>sudo dnf install steam gamemode mangohud goverlay gamescope mesa-vulkan-drivers.i686 mesa-dri-drivers.i686 -y
+sudo dnf install mesa-va-drivers-freeworld.i686 mesa-vdpau-drivers-freeworld.i686 -y</code></pre>
+<h3 id="how-to-use-these-gaming-utilities">How to use these gaming
+utilities</h3>
+<p>To use these tools, right-click any game in Steam -&gt;
+<strong>Properties</strong> -&gt; <strong>Launch Options</strong>.
+<em>(Note: You must literally type <code>%command%</code> at the end of
+your options. Steam automatically replaces this word with the game's
+executable).</em></p>
 <ul>
-<li><strong>GameMode:</strong> <code>gamemoderun %command%</code>
-  Forces your CPU into maximum performance mode to prevent stuttering.</li>
-<li><strong>MangoHud:</strong> <code>mangohud %command%</code>
-  Displays an FPS and hardware temperature overlay. 
-  <em>(Tip: Open the </em><em>GOverlay</em><em> app from your desktop menu to customize its look and hotkeys).</em></li>
-<li><strong>Gamescope:</strong> <code>gamescope --hdr-enabled -W 3840 -H 2160 -f -- %command%</code>
-  Forces the game into an isolated fullscreen container. <strong>Required to play games in HDR.</strong> <em>(Change 3840 and 2160 to match your monitor's resolution).</em></li>
+<li><strong>GameMode:</strong> <code>gamemoderun %command%</code> Forces
+your CPU into maximum performance mode to prevent stuttering.</li>
+<li><strong>MangoHud:</strong> <code>mangohud %command%</code> Displays
+an FPS and hardware temperature overlay. <em>(Tip: Open the
+<strong>GOverlay</strong> app from your desktop menu to customize its
+look and hotkeys).</em></li>
+<li><strong>Gamescope:</strong>
+<code>gamescope --hdr-enabled -W 3840 -H 2160 -f -- %command%</code>
+Forces the game into an isolated fullscreen container. <strong>Required
+to play games in HDR.</strong> <em>(Change 3840 and 2160 to match your
+monitor's resolution).</em></li>
 </ul>
 <p><strong>Combine them all at once:</strong>
 <code>gamemoderun gamescope --hdr-enabled -W 3840 -H 2160 -f -- mangohud %command%</code></p>
 <hr />
-<h2>Step 15 — Virtualization (VirtualBox)</h2>
-<p>VirtualBox is an easy-to-use virtual machine manager. Because it uses custom kernel modules, we install <code>akmods</code> to automatically rebuild its drivers in the background whenever Fedora updates your system kernel.</p>
-<pre><code class="language-bash"># Install VirtualBox and the akmod companion
-sudo dnf install VirtualBox akmod-VirtualBox -y
+<h2 id="step-15--virtualization-kvmqemu--windows-11">Step 15 —
+Virtualization (KVM/QEMU + Windows 11)</h2>
+<p>KVM is built into the Linux kernel, so VMs run at near-native speed
+and — unlike VirtualBox — there are <strong>no out-of-tree kernel
+modules</strong> (no <code>akmods</code>, nothing that can break after a
+kernel update). <strong>Virtual Machine Manager
+(<code>virt-manager</code>)</strong> is the GUI on top of it.</p>
+<div class="important">
+<div class="title">
+<p>Important</p>
+</div>
+<p><strong>Enable AMD-V in the BIOS first.</strong> On AM5 boards look
+for <strong>SVM Mode</strong> (usually <em>Advanced → CPU
+Configuration</em>) and set it to <strong>Enabled</strong>. Verify from
+Linux with:</p>
+<pre class="bash"><code>lscpu | grep -i virtualization    # should print: Virtualization: AMD-V</code></pre>
+</div>
+<h3 id="1-remove-virtualbox-only-if-you-installed-it-before">1. Remove
+VirtualBox (only if you installed it before)</h3>
+<p>KVM and VirtualBox can't use the CPU virtualization extensions at the
+same time, so remove VirtualBox first. Ignore any "no match"
+messages.</p>
+<pre class="bash"><code>sudo dnf remove VirtualBox akmod-VirtualBox &#39;kmod-VirtualBox*&#39; -y</code></pre>
+<div class="note">
+<div class="title">
+<p>Note</p>
+</div>
+<p>Old VirtualBox <code>.vdi</code> disks can be converted with
+<code>qemu-img convert -p -f vdi -O qcow2 old.vdi new.qcow2</code>, but
+a <strong>Windows installation will not boot</strong> on the new virtual
+hardware without VirtIO drivers (blue screen
+<code>INACCESSIBLE_BOOT_DEVICE</code>). For Windows, a fresh install as
+described below is the reliable way.</p>
+</div>
+<h3 id="2-install-the-virtualization-stack">2. Install the
+virtualization stack</h3>
+<pre class="bash"><code># QEMU/KVM, libvirt, virt-manager + UEFI firmware (OVMF) + TPM 2.0 emulation (swtpm)
+sudo dnf install @virtualization edk2-ovmf swtpm swtpm-tools -y
 
-# Build the kernel modules for your currently running kernel
-sudo akmods --kernels &quot;$(uname -r)&quot;
+# Manage VMs without root
+sudo usermod -aG libvirt $USER
 
-# Restart the VirtualBox driver service
-sudo systemctl restart vboxdrv
+# Fedora uses modular libvirt daemons — enable their sockets (they start on demand)
+sudo systemctl enable --now virtqemud.socket virtnetworkd.socket virtstoraged.socket \
+  virtnodedevd.socket virtnwfilterd.socket virtsecretd.socket
 
-# Add your user to the VirtualBox group
-sudo usermod -aG vboxusers $USER
-</code></pre>
-<p>After logging out and back in to apply the group permissions, launch <strong>VirtualBox</strong> from your KDE app launcher.</p>
-<blockquote>
-<p>[!NOTE]
-<strong>Is <code>akmods</code> safe?</strong> Yes! If <code>akmods</code> ever fails to rebuild the VirtualBox driver after a massive Fedora kernel update, your system will still boot perfectly normal. You simply won't be able to open VirtualBox until an update is released. It fails gracefully because your operating system does not rely on VirtualBox to function.</p>
-<p><strong>How to fix it if it breaks:</strong>
-1. <strong>The quick fix:</strong> Restart your PC and select the older, previous kernel from the GRUB boot menu (Fedora always keeps your last 3 kernels installed for emergencies). VirtualBox will instantly work again!
-2. <strong>The permanent fix:</strong> Wait a few days for RPM Fusion to release an update, run <code>sudo dnf update</code>, and then run <code>sudo akmods --force</code> to rebuild the driver for the new kernel.</p>
-</blockquote>
+# Make virsh/virt-manager default to the system connection (VMs visible to everyone)
+echo &#39;export LIBVIRT_DEFAULT_URI=qemu:///system&#39; &gt;&gt; ~/.bashrc
+
+# Default NAT network (ignore &quot;already active&quot; messages)
+sudo virsh net-autostart default
+sudo virsh net-start default</code></pre>
+<p><strong>Btrfs tuning for VM disks (do this once, before creating the
+first VM).</strong> VM images are huge and rewritten constantly. On
+Btrfs copy-on-write this causes heavy fragmentation, and Snapper would
+snapshot the images with every system update. A separate subvolume with
+copy-on-write disabled solves both:</p>
+<pre class="bash"><code>sudo rmdir /var/lib/libvirt/images          # only succeeds if it is empty — that&#39;s what we want
+sudo btrfs subvolume create /var/lib/libvirt/images
+sudo chattr +C /var/lib/libvirt/images      # disable CoW for new VM disks
+sudo chmod 711 /var/lib/libvirt/images
+sudo restorecon -RF /var/lib/libvirt/images</code></pre>
+<p>Now <strong>log out and back in</strong> (applies the
+<code>libvirt</code> group), then launch <strong>Virtual Machine
+Manager</strong> from the KDE app launcher. It should show
+<strong>QEMU/KVM</strong> as connected.</p>
+<h3 id="3-create-a-windows-11-vm">3. Create a Windows 11 VM</h3>
+<p><strong>Download the two ISOs</strong> and keep them in
+<code>/var/lib/libvirt/images/</code> (the <code>qemu</code> user cannot
+read files in your home folder, which causes "permission denied" errors
+when starting the VM):</p>
+<pre class="bash"><code># VirtIO drivers for Windows (disk, network, display, clipboard…)
+sudo curl -L -o /var/lib/libvirt/images/virtio-win.iso \
+  https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso
+
+# Windows 11 ISO: download &quot;Windows 11 (multi-edition ISO for x64 devices)&quot; from
+# https://www.microsoft.com/software-download/windows11 and move it:
+sudo mv ~/Downloads/Win11_*_x64*.iso /var/lib/libvirt/images/
+sudo restorecon -v /var/lib/libvirt/images/*.iso</code></pre>
+<p><strong>In virt-manager</strong> (<em>File → New Virtual Machine →
+Local install media</em>):</p>
+<ol type="1">
+<li>Select the Windows 11 ISO. OS: <strong>Microsoft Windows
+11</strong>.</li>
+<li>Memory <strong>16384 MB</strong>, <strong>8 CPUs</strong> (your
+7800X3D has 16 threads — this leaves half for the host), disk
+<strong>120 GiB</strong>.</li>
+<li>Tick <strong>Customize configuration before install</strong>, then
+<em>Finish</em> and adjust:
+<ul>
+<li><strong>Overview:</strong> Chipset <code>Q35</code>, Firmware
+<strong>UEFI x86_64</strong> (an <code>OVMF_CODE…secboot…</code> entry).
+Windows 11 requires UEFI.</li>
+<li><strong>CPUs:</strong> tick <strong>Copy host CPU
+configuration</strong> (host-passthrough).</li>
+<li><strong>SATA Disk 1 → Disk bus:</strong> change to
+<strong>VirtIO</strong>.</li>
+<li><strong>NIC → Device model:</strong> change to
+<strong>virtio</strong>.</li>
+<li><strong>Add Hardware → Storage:</strong> Device type
+<strong>CDROM</strong>, <em>Select or create custom storage</em> →
+<code>/var/lib/libvirt/images/virtio-win.iso</code>.</li>
+<li><strong>TPM:</strong> must exist as <em>Emulated</em>, model
+<em>CRB</em>, version <em>2.0</em> (added automatically for the Windows
+11 profile; add it manually if missing).</li>
+</ul></li>
+<li>Click <strong>Begin Installation</strong> and press a key quickly at
+<em>"Press any key to boot from CD or DVD"</em>.</li>
+</ol>
+<p><strong>During the Windows installer:</strong></p>
+<ul>
+<li>At <strong>"Where do you want to install Windows?"</strong> the list
+is empty — click <strong>Load driver → Browse</strong>, pick the
+<code>virtio-win</code> CD → <code>viostor</code> → <code>w11</code> →
+<code>amd64</code>, and install the <em>Red Hat VirtIO SCSI
+controller</em>. Your disk now appears.</li>
+<li>To skip the forced Microsoft-account/internet screen: press
+<strong>Shift+F10</strong> and run <code>start ms-cxh:localonly</code>
+(newer builds) or <code>OOBE\BYPASSNRO</code> (older builds, reboots and
+then shows <em>"I don't have internet"</em>).</li>
+</ul>
+<p><strong>After Windows is installed</strong>, open the
+<code>virtio-win</code> CD inside Windows and run
+<strong><code>virtio-win-guest-tools.exe</code></strong>. It installs
+every VirtIO driver (network, balloon, display) plus the SPICE guest
+agent (clipboard sharing, auto-resize, smooth mouse). Reboot the VM,
+then you can remove the CD-ROM devices.</p>
+<div class="tip">
+<div class="title">
+<p>Tip</p>
+</div>
+<p>Start and stop the VM any time from virt-manager, or from the
+terminal: <code>virsh start win11</code> /
+<code>virsh shutdown win11</code> (use your VM's name).</p>
+</div>
+<div class="note">
+<div class="title">
+<p>Note</p>
+</div>
+<p><strong>Limits:</strong> the VM gets an emulated GPU, so it is great
+for office software, university tools and testing — not for 3D gaming.
+For games, use Windows natively (dual-boot) or set up GPU
+passthrough.</p>
+</div>
+<div class="warning">
+<div class="title">
+<p>Warning</p>
+</div>
+<p><strong>Docker and VM networking:</strong> Docker sets the firewall
+<code>FORWARD</code> policy to <code>DROP</code>, which can cut off the
+VM's internet while Docker is running. If that happens, either
+<code>sudo systemctl stop docker</code> or allow the libvirt bridge
+until the next reboot:</p>
+<pre class="bash"><code>sudo iptables -I DOCKER-USER -i virbr0 -j ACCEPT
+sudo iptables -I DOCKER-USER -o virbr0 -j ACCEPT</code></pre>
+</div>
 <hr />
-<h2>Step 16 — Tailscale (Mesh VPN)</h2>
-<p>Zero-config mesh VPN that connects all your devices into a private network. Works through NAT/firewalls without port forwarding.</p>
-<pre><code class="language-bash"># Run the official automated install script
+<h2 id="step-16--tailscale-mesh-vpn">Step 16 — Tailscale (Mesh VPN)</h2>
+<p>Zero-config mesh VPN that connects all your devices into a private
+network. Works through NAT/firewalls without port forwarding.</p>
+<pre class="bash"><code># Run the official automated install script
 curl -fsSL https://tailscale.com/install.sh | sh
 
 # Authenticate and connect to your network (opens browser)
-sudo tailscale up
-</code></pre>
-<p><strong>Firewalld zone setup</strong> (keeps Tailscale traffic separate from your main network rules):</p>
-<pre><code class="language-bash">sudo firewall-cmd --permanent --new-zone=tailscale
+sudo tailscale up</code></pre>
+<p><strong>Firewalld zone setup</strong> (keeps Tailscale traffic
+separate from your main network rules):</p>
+<pre class="bash"><code>sudo firewall-cmd --permanent --new-zone=tailscale
 sudo firewall-cmd --permanent --zone=tailscale --add-interface=tailscale0
 sudo firewall-cmd --permanent --zone=tailscale --set-target=ACCEPT
 # Allow direct peer-to-peer WireGuard tunnels (reduces latency)
 sudo firewall-cmd --permanent --add-port=41641/udp
-sudo firewall-cmd --reload
-</code></pre>
-<blockquote>
-<p>[!NOTE]
-<strong>Why do we need this firewall setup?</strong>
-Out of the box, Fedora's firewall is highly restrictive. If you do not configure it, it will block your other Tailscale devices from accessing this PC, and it will force your VPN traffic to route slowly through Tailscale's global relay servers.</p>
-<p><strong>What this code does:</strong>
-1. It creates an isolated, trusted "bucket" (a zone) specifically for your Tailscale interface (<code>tailscale0</code>) so your personal devices can talk to each other.
-2. It opens UDP port <code>41641</code>. This allows Tailscale to form direct, high-speed peer-to-peer connections.</p>
-<p><strong>How it affects standard usage:</strong>
-This all happens silently in the background. It does <em>not</em> weaken your computer's main security because the "trust" is only applied to the private VPN network. Your standard internet connection (Wi-Fi or Ethernet) remains fully locked down by Fedora's default strict firewall rules.</p>
-</blockquote>
+sudo firewall-cmd --reload</code></pre>
+<div class="note">
+<div class="title">
+<p>Note</p>
+</div>
+<p><strong>Why do we need this firewall setup?</strong> Out of the box,
+Fedora's firewall is highly restrictive. If you do not configure it, it
+will block your other Tailscale devices from accessing this PC, and it
+will force your VPN traffic to route slowly through Tailscale's global
+relay servers.</p>
+<p><strong>What this code does:</strong></p>
+<ol type="1">
+<li>It creates an isolated, trusted "bucket" (a zone) specifically for
+your Tailscale interface (<code>tailscale0</code>) so your personal
+devices can talk to each other.</li>
+<li>It opens UDP port <code>41641</code>. This allows Tailscale to form
+direct, high-speed peer-to-peer connections.</li>
+</ol>
+<p><strong>How it affects standard usage:</strong> This all happens
+silently in the background. It does <em>not</em> weaken your computer's
+main security because the "trust" is only applied to the private VPN
+network. Your standard internet connection (Wi-Fi or Ethernet) remains
+fully locked down by Fedora's default strict firewall rules.</p>
+</div>
 <hr />
-<h2>Step 17 — Sunshine (Game Streaming)</h2>
-<p>Streams your desktop and games to any device running the Moonlight client. Pairs perfectly with Tailscale for remote streaming.</p>
-<pre><code class="language-bash"># Enable the official LizardByte COPR repository
+<h2 id="step-17--sunshine-game-streaming">Step 17 — Sunshine (Game
+Streaming)</h2>
+<p>Streams your desktop and games to any device running the Moonlight
+client. Pairs perfectly with Tailscale for remote streaming.</p>
+<pre class="bash"><code># Enable the official LizardByte COPR repository
 sudo dnf copr enable lizardbyte/stable -y
 
 # Install Sunshine
-sudo dnf install Sunshine -y
-</code></pre>
-<p><strong>Firewall rules (Required for Local Network Streaming):</strong>
-<em>Unlike other operating systems, Fedora's firewall aggressively blocks incoming local network traffic. These are the exact ports required by the NVIDIA GameStream protocol to stream video and receive controller inputs. (Fun fact: Even though you have an AMD graphics card, Sunshine reverse-engineers NVIDIA's ultra-fast streaming protocol so you get the exact same low-latency performance).</em></p>
-<pre><code class="language-bash">sudo firewall-cmd --permanent --add-port={47984,47989,48010}/tcp
+sudo dnf install Sunshine -y</code></pre>
+<p><strong>Firewall rules (Required for Local Network
+Streaming):</strong> <em>Unlike other operating systems, Fedora's
+firewall aggressively blocks incoming local network traffic. These are
+the exact ports required by the NVIDIA GameStream protocol to stream
+video and receive controller inputs. (Fun fact: Even though you have an
+AMD graphics card, Sunshine reverse-engineers NVIDIA's ultra-fast
+streaming protocol so you get the exact same low-latency
+performance).</em></p>
+<pre class="bash"><code>sudo firewall-cmd --permanent --add-port={47984,47989,48010}/tcp
 sudo firewall-cmd --permanent --add-port={5353,47998,47999,48000,48002,48010}/udp
-sudo firewall-cmd --reload
-</code></pre>
-<p><strong>Enable Avahi (mDNS auto-discovery for Moonlight):</strong></p>
-<pre><code class="language-bash">sudo dnf install avahi -y
-sudo systemctl enable --now avahi-daemon
-</code></pre>
+sudo firewall-cmd --reload</code></pre>
+<p><strong>Enable Avahi (mDNS auto-discovery for
+Moonlight):</strong></p>
+<pre class="bash"><code>sudo dnf install avahi -y
+sudo systemctl enable --now avahi-daemon</code></pre>
 <p><strong>Start Sunshine as a user service:</strong></p>
-<pre><code class="language-bash"># Start Sunshine in the background
+<pre class="bash"><code># Start Sunshine in the background
 systemctl --user enable --now sunshine
 
 # Allow Sunshine to keep running headlessly even when you are logged out
-sudo loginctl enable-linger $USER
-</code></pre>
-<h3>How to Connect and Play</h3>
-<p><strong>1. Initial Setup (On your Fedora PC):</strong>
-* Open your web browser and go to <code>https://localhost:47990</code>
-* Ignore the browser security warning (it's a local self-signed certificate) and create an admin username and password.</p>
-<p><strong>2. Local Network Play (In your house):</strong>
-* Download the <strong><a href="https://moonlight-stream.org/">Moonlight</a></strong> app on your phone, TV, or laptop.
-* Because we installed <code>avahi</code>, Moonlight will automatically see your Fedora PC on your Wi-Fi. 
-* Click your PC. Moonlight will give you a PIN. Type that PIN into the "PIN" tab of your Sunshine Web UI to pair them.</p>
-<p><strong>3. Remote Play (Outside your house):</strong>
-* Turn on <strong><a href="https://tailscale.com/download">Tailscale</a></strong> on your Fedora PC and your remote device.
-* Open Moonlight, click the "+" button, and type in your Fedora PC's Tailscale IP address.
-* It will connect instantly, bypassing your home router!</p>
-<blockquote>
-<p>[!NOTE] 
-<strong>Headless streaming (monitor off):</strong> Wayland stops rendering when no display is attached. To stream with your real monitor turned off, buy a cheap HDMI dummy plug (~$5) from Amazon to trick your graphics card into staying awake.</p>
-</blockquote>
+sudo loginctl enable-linger $USER</code></pre>
+<h3 id="how-to-connect-and-play">How to Connect and Play</h3>
+<p><strong>1. Initial Setup (On your Fedora PC):</strong></p>
+<ul>
+<li>Open your web browser and go to
+<code>https://localhost:47990</code></li>
+<li>Ignore the browser security warning (it's a local self-signed
+certificate) and create an admin username and password.</li>
+</ul>
+<p><strong>2. Local Network Play (In your house):</strong></p>
+<ul>
+<li>Download the <strong><a
+href="https://moonlight-stream.org/">Moonlight</a></strong> app on your
+phone, TV, or laptop.</li>
+<li>Because we installed <code>avahi</code>, Moonlight will
+automatically see your Fedora PC on your Wi-Fi.</li>
+<li>Click your PC. Moonlight will give you a PIN. Type that PIN into the
+"PIN" tab of your Sunshine Web UI to pair them.</li>
+</ul>
+<p><strong>3. Remote Play (Outside your house):</strong></p>
+<ul>
+<li>Turn on <strong><a
+href="https://tailscale.com/download">Tailscale</a></strong> on your
+Fedora PC and your remote device.</li>
+<li>Open Moonlight, click the "+" button, and type in your Fedora PC's
+Tailscale IP address.</li>
+<li>It will connect instantly, bypassing your home router!</li>
+</ul>
+<div class="note">
+<div class="title">
+<p>Note</p>
+</div>
+<p><strong>Headless streaming (monitor off):</strong> Wayland stops
+rendering when no display is attached. To stream with your real monitor
+turned off, buy a cheap HDMI dummy plug (~$5) from Amazon to trick your
+graphics card into staying awake.</p>
+</div>
 <hr />
-<h2>⟳ REBOOT</h2>
-<p>Everything above needs a reboot to apply: kernel parameters, Mesa drivers, kernel modules (uinput, i2c), and user group memberships (<code>docker</code>, <code>libvirt</code>, <code>input</code>, <code>i2c</code>).</p>
-<pre><code class="language-bash">sudo reboot
-</code></pre>
+<h2 id="-reboot">⟳ REBOOT</h2>
+<p>Everything above needs a reboot to apply: kernel parameters, Mesa
+drivers, kernel modules (uinput, i2c), and user group memberships
+(<code>docker</code>, <code>libvirt</code>, <code>input</code>,
+<code>i2c</code>).</p>
+<pre class="bash"><code>sudo reboot</code></pre>
 <hr />
-<h2>Step 18 — Verify hardware &amp; system setup</h2>
-<p>After rebooting, verify all hardware drivers, system groups, and networking services:</p>
-<pre><code class="language-bash"># AMD GPU detected?
+<h2 id="step-18--verify-hardware--system-setup">Step 18 — Verify
+hardware &amp; system setup</h2>
+<p>After rebooting, verify all hardware drivers, system groups, and
+networking services:</p>
+<pre class="bash"><code># AMD GPU detected?
 lspci | grep -i amd
 
 # Hardware video decoding works?
@@ -403,24 +628,32 @@ virt-host-validate
 tailscale status
 
 # Sunshine streaming server active?
-systemctl --user status sunshine
-</code></pre>
+systemctl --user status sunshine</code></pre>
 <hr />
-<h2>Step 19 — PostgreSQL (Podman + DHI)</h2>
-<p>Runs PostgreSQL in a security-hardened container from <a href="https://dhi.io">Docker Hardened Images (DHI)</a>. The cleanest way to run it is in a rootless Podman container using <strong>Quadlet</strong> (a feature built directly into Fedora's pre-installed Podman engine). This allows the container to be managed exactly like a native systemd service.</p>
-<blockquote>
-<p>[!NOTE]
-<strong>Prerequisites:</strong> DHI requires a free Docker Hub login to pull their hardened images.</p>
-</blockquote>
-<p><strong>1. Authenticate with the DHI registry (one-time):</strong></p>
-<pre><code class="language-bash">podman login dhi.io
-</code></pre>
+<h2 id="step-19--postgresql-podman--dhi">Step 19 — PostgreSQL (Podman +
+DHI)</h2>
+<p>Runs PostgreSQL in a security-hardened container from <a
+href="https://dhi.io">Docker Hardened Images (DHI)</a>. The cleanest way
+to run it is in a rootless Podman container using
+<strong>Quadlet</strong> (a feature built directly into Fedora's
+pre-installed Podman engine). This allows the container to be managed
+exactly like a native systemd service.</p>
+<div class="note">
+<div class="title">
+<p>Note</p>
+</div>
+<p><strong>Prerequisites:</strong> DHI requires a free Docker Hub login
+to pull their hardened images.</p>
+</div>
+<p><strong>1. Authenticate with the DHI registry
+(one-time):</strong></p>
+<pre class="bash"><code>podman login dhi.io</code></pre>
 <p><strong>2. Create persistent data directory:</strong></p>
-<pre><code class="language-bash">mkdir -p ~/Database-data/postgres
-</code></pre>
+<pre class="bash"><code>mkdir -p ~/Database-data/postgres</code></pre>
 <p><strong>3. Create the Quadlet configuration:</strong></p>
-<p>Create the file at <code>~/.config/containers/systemd/postgres.container</code>:</p>
-<pre><code class="language-ini">[Unit]
+<p>Create the file at
+<code>~/.config/containers/systemd/postgres.container</code>:</p>
+<pre class="ini"><code>[Unit]
 Description=PostgreSQL Database Container
 After=network-online.target
 
@@ -432,97 +665,158 @@ Volume=%h/Database-data/postgres:/var/lib/postgresql/data:Z
 Environment=POSTGRES_USER=daniel POSTGRES_PASSWORD=your_password POSTGRES_DB=mydb
 
 [Service]
-Restart=no
-</code></pre>
+Restart=no</code></pre>
 <p><strong>4. Activate the service:</strong></p>
-<pre><code class="language-bash">systemctl --user daemon-reload
-systemctl --user start postgres
-</code></pre>
-<blockquote>
-<p>[!IMPORTANT]
-<strong>No auto-start by design.</strong> Because we set <code>Restart=no</code> and omitted an <code>[Install]</code> section, it will NOT start on boot. This saves ~150-200MB of idle RAM when you're gaming or not developing.</p>
-</blockquote>
-<h4>On-Demand PostgreSQL:</h4>
+<pre class="bash"><code>systemctl --user daemon-reload
+systemctl --user start postgres</code></pre>
+<div class="important">
+<div class="title">
+<p>Important</p>
+</div>
+<p><strong>No auto-start by design.</strong> Because we set
+<code>Restart=no</code> and omitted an <code>[Install]</code> section,
+it will NOT start on boot. This saves ~150-200MB of idle RAM when you're
+gaming or not developing.</p>
+</div>
+<p><strong>On-Demand PostgreSQL:</strong></p>
 <ul>
-<li><strong>Where are my files?</strong> All database files are stored natively in your home folder at <code>~/Database-data/postgres</code>. Your data persists even if the container is deleted or updated. The <code>:Z</code> SELinux label ensures the container has permission to read/write to this folder.</li>
-<li><strong>Start when needed:</strong> <code>systemctl --user start postgres</code></li>
-<li><strong>Stop when done:</strong> <code>systemctl --user stop postgres</code></li>
-<li><strong>Check status:</strong> <code>systemctl --user status postgres</code></li>
-<li><strong>View logs:</strong> <code>journalctl --user -fu postgres</code></li>
+<li><strong>Where are my files?</strong> All database files are stored
+natively in your home folder at <code>~/Database-data/postgres</code>.
+Your data persists even if the container is deleted or updated. The
+<code>:Z</code> SELinux label ensures the container has permission to
+read/write to this folder.</li>
+<li><strong>Start when needed:</strong>
+<code>systemctl --user start postgres</code></li>
+<li><strong>Stop when done:</strong>
+<code>systemctl --user stop postgres</code></li>
+<li><strong>Check status:</strong>
+<code>systemctl --user status postgres</code></li>
+<li><strong>View logs:</strong>
+<code>journalctl --user -fu postgres</code></li>
 </ul>
 <p><strong>5. Connect to the database:</strong></p>
-<pre><code class="language-bash"># Connect to the running container
+<pre class="bash"><code># Connect to the running container
 podman exec -it postgres psql -U daniel -d mydb
 
 # Inside psql — verify it works:
 SELECT version();
-\q
-</code></pre>
-<p>From the host, you can also connect with any standard PostgreSQL client on <code>127.0.0.1:5432</code> (user <code>daniel</code>, password <code>your_password</code>, database <code>mydb</code>). Authentication is <code>scram-sha-256</code> by default — no <code>pg_hba.conf</code> editing needed.</p>
-<blockquote>
-<p>[!TIP]
-<strong>GUI clients:</strong> Use <strong>DBeaver</strong> (<code>sudo dnf install dbeaver</code>) or the PostgreSQL extension in VS Code/Cursor for a visual interface. Connection string: <code>postgresql://daniel:your_password@127.0.0.1:5432/mydb</code></p>
-</blockquote>
+\q</code></pre>
+<p>From the host, you can also connect with any standard PostgreSQL
+client on <code>127.0.0.1:5432</code> (user <code>daniel</code>,
+password <code>your_password</code>, database <code>mydb</code>).
+Authentication is <code>scram-sha-256</code> by default — no
+<code>pg_hba.conf</code> editing needed.</p>
+<div class="tip">
+<div class="title">
+<p>Tip</p>
+</div>
+<p><strong>GUI clients:</strong> Use <strong>DBeaver</strong> (installed
+via Flatpak in Step 22, or now with
+<code>flatpak install flathub io.dbeaver.DBeaverCommunity -y</code>) or
+the PostgreSQL extension in VS Code/Cursor for a visual interface.
+Connection string:
+<code>postgresql://daniel:your_password@127.0.0.1:5432/mydb</code></p>
+</div>
 <hr />
-<h2>Step 20 — MongoDB (Podman container)</h2>
-<p>MongoDB Inc. dropped Fedora support in 2019. The cleanest way to run it is in a rootless Podman container using <strong>Quadlet</strong> (a feature built directly into Fedora's pre-installed Podman engine). This allows the container to be managed exactly like a native systemd service — no extra downloads required.</p>
-<pre><code class="language-bash"># Create persistent data directory
-mkdir -p ~/Database-data/mongodb
-</code></pre>
-<p>Create the Quadlet file at <code>~/.config/containers/systemd/mongodb.container</code>:</p>
-<pre><code class="language-ini">[Unit]
+<h2 id="step-20--mongodb-podman-container">Step 20 — MongoDB (Podman
+container)</h2>
+<p>MongoDB Inc. dropped Fedora support in 2019. The cleanest way to run
+it is in a rootless Podman container using <strong>Quadlet</strong> (a
+feature built directly into Fedora's pre-installed Podman engine). This
+allows the container to be managed exactly like a native systemd service
+— no extra downloads required.</p>
+<pre class="bash"><code># Create persistent data directory
+mkdir -p ~/Database-data/mongodb</code></pre>
+<p>Create the Quadlet file at
+<code>~/.config/containers/systemd/mongodb.container</code>:</p>
+<pre class="ini"><code>[Unit]
 Description=MongoDB Database Container
 After=network-online.target
 
 [Container]
-Image=docker.io/library/mongo:latest
+Image=docker.io/mongodb/mongodb-community-server:latest
 ContainerName=mongodb
 PublishPort=127.0.0.1:27017:27017
-Volume=%h/Database-data/mongodb:/data/db:Z
-Environment=MONGO_INITDB_ROOT_USERNAME=admin MONGO_INITDB_ROOT_PASSWORD=SuperSecretPassword
+Volume=%h/Database-data/mongodb:/data/db:Z,U
+Environment=MONGODB_INITDB_ROOT_USERNAME=admin MONGODB_INITDB_ROOT_PASSWORD=SuperSecretPassword
 
 [Service]
-Restart=always
-</code></pre>
-<pre><code class="language-bash"># Activate the service
+Restart=always</code></pre>
+<pre class="bash"><code># Activate the service
 systemctl --user daemon-reload
-systemctl --user start mongodb
-</code></pre>
-<blockquote>
-<p>[!NOTE]
-Change <code>SuperSecretPassword</code> to something real. The <code>:Z</code> SELinux label is required on Fedora or the container can't access the volume.</p>
-</blockquote>
-<h4>Optional: On-Demand MongoDB</h4>
-<p>Leaving the MongoDB container always running uses ~200-300MB of idle RAM. If you prefer a leaner system when not developing, you can manage it manually:</p>
+systemctl --user start mongodb</code></pre>
+<div class="note">
+<div class="title">
+<p>Note</p>
+</div>
+<p>Change <code>SuperSecretPassword</code> to something real. The
+<code>:Z</code> SELinux label is required on Fedora or the container
+can't access the volume.</p>
+<p><strong>Image details:</strong>
+<code>mongodb/mongodb-community-server</code> is MongoDB Inc.'s own
+image (the old <code>library/mongo</code> one is a Docker-maintained
+build). It reads the <code>MONGODB_INITDB_ROOT_*</code> variables (not
+<code>MONGO_INITDB_ROOT_*</code>) and runs <code>mongod</code> as a
+non-root user, so the <code>U</code> flag tells Podman to give that user
+ownership of <code>~/Database-data/mongodb</code>. The root user is only
+created when the data folder is <strong>empty</strong>. If you already
+ran the old <code>mongo</code> image, either delete
+<code>~/Database-data/mongodb</code> (or move it away) before the first
+start, or keep your old user and password.</p>
+</div>
+<p><strong>Optional: On-Demand MongoDB</strong></p>
+<p>Leaving the MongoDB container always running uses ~200-300MB of idle
+RAM. If you prefer a leaner system when not developing, you can manage
+it manually:</p>
 <ul>
-<li><strong>Where are my files?</strong> All of your raw database files are stored natively in your home folder at <code>~/Database-data/mongodb</code>. Because we mapped this volume, your data persists even if the container is deleted or updated.</li>
-<li><strong>Start when needed:</strong> <code>systemctl --user start mongodb</code></li>
-<li><strong>Stop when done:</strong> <code>systemctl --user stop mongodb</code></li>
-<li><strong>Enable auto-start on boot with:</strong> <code>systemctl --user enable mongodb</code></li>
-<li><strong>Disable auto-start on boot with:</strong> <code>systemctl --user disable mongodb</code></li>
-<li><strong>Check server status:</strong> <code>systemctl --user status mongodb</code></li>
-<li><strong>View server logs:</strong> <code>journalctl --user -fu mongodb</code></li>
+<li><strong>Where are my files?</strong> All of your raw database files
+are stored natively in your home folder at
+<code>~/Database-data/mongodb</code>. Because we mapped this volume,
+your data persists even if the container is deleted or updated.</li>
+<li><strong>Start when needed:</strong>
+<code>systemctl --user start mongodb</code></li>
+<li><strong>Stop when done:</strong>
+<code>systemctl --user stop mongodb</code></li>
+<li><strong>Enable auto-start on boot with:</strong>
+<code>systemctl --user enable mongodb</code></li>
+<li><strong>Disable auto-start on boot with:</strong>
+<code>systemctl --user disable mongodb</code></li>
+<li><strong>Check server status:</strong>
+<code>systemctl --user status mongodb</code></li>
+<li><strong>View server logs:</strong>
+<code>journalctl --user -fu mongodb</code></li>
 </ul>
 <p><strong>How to connect to the database:</strong></p>
 <ul>
-<li><strong>From your terminal (CLI):</strong> Run <code>podman exec -it mongodb mongosh -u admin -p</code> (type the <code>SuperSecretPassword</code> when prompted).</li>
-<li><strong>From GUI tools / App code:</strong> Connect via standard connection string <code>mongodb://admin:SuperSecretPassword@127.0.0.1:27017</code> using an app like <strong>MongoDB Compass</strong> or VS Code extensions.</li>
+<li><strong>From your terminal (CLI):</strong> Run
+<code>podman exec -it mongodb mongosh -u admin -p</code> (type the
+<code>SuperSecretPassword</code> when prompted).</li>
+<li><strong>From GUI tools / App code:</strong> Connect via standard
+connection string
+<code>mongodb://admin:SuperSecretPassword@127.0.0.1:27017</code> using
+an app like <strong>MongoDB Compass</strong> or VS Code extensions.</li>
 </ul>
 <hr />
-<h2>Step 21 — Multi-Account Git Setup (Workspaces + SSH)</h2>
-<p>Quick config to separate personal and work/university repositories by folder — no manual account switching needed.</p>
+<h2 id="step-21--multi-account-git-setup-workspaces--ssh">Step 21 —
+Multi-Account Git Setup (Workspaces + SSH)</h2>
+<p>Quick config to separate personal and work/university repositories by
+folder — no manual account switching needed.</p>
 <p><strong>1. Generate SSH keys:</strong></p>
-<pre><code class="language-bash">ssh-keygen -t ed25519 -C "personal@email.com" -f ~/.ssh/id_ed25519_personal
-ssh-keygen -t ed25519 -C "work@fhnw.ch" -f ~/.ssh/id_ed25519_work
-</code></pre>
-<p>Add the public keys (<code>.pub</code>) to the respective profiles:</p>
+<pre class="bash"><code>ssh-keygen -t ed25519 -C &quot;personal@email.com&quot; -f ~/.ssh/id_ed25519_personal
+ssh-keygen -t ed25519 -C &quot;work@fhnw.ch&quot; -f ~/.ssh/id_ed25519_work</code></pre>
+<p>Add the public keys (<code>.pub</code>) to the respective
+profiles:</p>
 <ul>
-<li><code>~/.ssh/id_ed25519_personal.pub</code> → GitHub → <strong>Settings → SSH and GPG Keys</strong></li>
-<li><code>~/.ssh/id_ed25519_work.pub</code> → GitLab → <strong>Preferences → SSH Keys</strong></li>
+<li><code>~/.ssh/id_ed25519_personal.pub</code> → GitHub →
+<strong>Settings → SSH and GPG Keys</strong></li>
+<li><code>~/.ssh/id_ed25519_work.pub</code> → GitLab →
+<strong>Preferences → SSH Keys</strong></li>
 </ul>
-<p><strong>2. Route keys by host (<code>~/.ssh/config</code>):</strong></p>
-<p>Create or edit <code>~/.ssh/config</code> (ensure permissions with <code>chmod 600 ~/.ssh/config</code>):</p>
-<pre><code class="language-text">Host github.com
+<p><strong>2. Route keys by host
+(<code>~/.ssh/config</code>):</strong></p>
+<p>Create or edit <code>~/.ssh/config</code> (ensure permissions with
+<code>chmod 600 ~/.ssh/config</code>):</p>
+<pre class="text"><code>Host github.com
     HostName github.com
     User git
     IdentityFile ~/.ssh/id_ed25519_personal
@@ -532,57 +826,55 @@ Host gitlab.fhnw.ch
     HostName gitlab.fhnw.ch
     User git
     IdentityFile ~/.ssh/id_ed25519_work
-    IdentitiesOnly yes
-</code></pre>
+    IdentitiesOnly yes</code></pre>
 <p><strong>3. Create project directories:</strong></p>
-<pre><code class="language-bash">mkdir -p ~/Projects/Personal ~/Projects/Work
-</code></pre>
+<pre class="bash"><code>mkdir -p ~/Projects/Personal ~/Projects/Work</code></pre>
 <p><strong>4. Git config with conditional includes:</strong></p>
 <p><code>~/.gitconfig</code> (main):</p>
-<pre><code class="language-ini">[core]
+<pre class="ini"><code>[core]
     editor = nano
 
 [user]
     name = Your Name
     email = personal@email.com
 
-[includeIf "gitdir:~/Projects/Personal/"]
+[includeIf &quot;gitdir:~/Projects/Personal/&quot;]
     path = ~/.gitconfig-personal
 
-[includeIf "gitdir:~/Projects/Work/"]
-    path = ~/.gitconfig-work
-</code></pre>
+[includeIf &quot;gitdir:~/Projects/Work/&quot;]
+    path = ~/.gitconfig-work</code></pre>
 <p><code>~/.gitconfig-personal</code>:</p>
-<pre><code class="language-ini">[user]
-    email = personal@email.com
-</code></pre>
+<pre class="ini"><code>[user]
+    email = personal@email.com</code></pre>
 <p><code>~/.gitconfig-work</code>:</p>
-<pre><code class="language-ini">[user]
-    email = work@fhnw.ch
-</code></pre>
+<pre class="ini"><code>[user]
+    email = work@fhnw.ch</code></pre>
 <p><strong>5. Install platform CLIs:</strong></p>
-<pre><code class="language-bash">sudo dnf install gh glab -y
+<pre class="bash"><code>sudo dnf install gh glab -y
 gh auth login
-glab auth login --hostname gitlab.fhnw.ch
-</code></pre>
+glab auth login --hostname gitlab.fhnw.ch</code></pre>
 <p><strong>6. Verify:</strong></p>
-<pre><code class="language-bash"># Test SSH authentication
+<pre class="bash"><code># Test SSH authentication
 ssh -T git@github.com
 ssh -T git@gitlab.fhnw.ch
 
 # Test email override — init a repo inside a target folder and check:
 cd ~/Projects/Work &amp;&amp; git init test &amp;&amp; cd test
 git config user.email   # Should show work@fhnw.ch
-cd ~ &amp;&amp; rm -rf ~/Projects/Work/test
-</code></pre>
-<blockquote>
-<p>[!TIP]
-Git's <code>includeIf "gitdir:"</code> matches any repo <strong>inside</strong> that directory tree. As long as you clone work repos into <code>~/Projects/Work/</code> and personal repos into <code>~/Projects/Personal/</code>, the correct identity is applied automatically.</p>
-</blockquote>
-
+cd ~ &amp;&amp; rm -rf ~/Projects/Work/test</code></pre>
+<div class="tip">
+<div class="title">
+<p>Tip</p>
+</div>
+<p>Git's <code>includeIf "gitdir:"</code> matches any repo
+<strong>inside</strong> that directory tree. As long as you clone work
+repos into <code>~/Projects/Work/</code> and personal repos into
+<code>~/Projects/Personal/</code>, the correct identity is applied
+automatically.</p>
+</div>
 <hr />
-<h2>Step 22 — Flatpak Apps</h2>
-<pre><code class="language-bash">flatpak install flathub net.davidotek.pupgui2 -y          # ProtonUp-Qt
+<h2 id="step-22--flatpak-apps">Step 22 — Flatpak Apps</h2>
+<pre class="bash"><code>flatpak install flathub net.davidotek.pupgui2 -y          # ProtonUp-Qt
 flatpak install flathub org.kde.krita -y                   # Krita
 flatpak install flathub com.discordapp.Discord -y          # Discord
 flatpak install flathub org.telegram.desktop -y            # Telegram
@@ -596,64 +888,116 @@ flatpak install flathub org.torproject.torbrowser-launcher -y # Tor Browser
 flatpak install flathub org.mozilla.Thunderbird -y           # Thunderbird (Email)
 flatpak install flathub us.zoom.Zoom -y                      # Zoom
 flatpak install flathub com.github.IsmaelMartinez.teams_for_linux -y # Microsoft Teams (community wrapper)
-</code></pre>
-<blockquote>
-<p>[!NOTE]
-<strong>Microsoft Teams:</strong> The community <code>teams-for-linux</code> wrapper packages the Teams web app as a standalone desktop application. Microsoft does not ship an official Linux client — if you prefer the official experience, you can also install Teams as a Progressive Web App (PWA) directly from your browser.</p>
-</blockquote>
-<blockquote>
-<p>[!NOTE]
-The Blender Flatpak cannot use AMD ROCm/HIP for GPU rendering due to sandbox restrictions. If you want to render with your RX 9070 XT, install Blender natively instead:
-<code>sudo dnf install blender -y</code>
-(Since you already installed <code>rocm-hip</code> globally in Step 3, native Blender will automatically detect your GPU for Cycles rendering).</p>
-</blockquote>
-<p><strong>LocalSend Firewall Rules:</strong>
-By default, Fedora's firewall will block incoming LocalSend file transfers. Run this to open the required port (53317):</p>
-<pre><code class="language-bash">sudo firewall-cmd --add-port=53317/tcp --permanent
+flatpak install flathub io.dbeaver.DBeaverCommunity -y     # DBeaver (database GUI)</code></pre>
+<div class="note">
+<div class="title">
+<p>Note</p>
+</div>
+<p><strong>Microsoft Teams:</strong> The community
+<code>teams-for-linux</code> wrapper packages the Teams web app as a
+standalone desktop application. Microsoft does not ship an official
+Linux client — if you prefer the official experience, you can also
+install Teams as a Progressive Web App (PWA) directly from your
+browser.</p>
+</div>
+<div class="note">
+<div class="title">
+<p>Note</p>
+</div>
+<p>The Blender Flatpak cannot use AMD ROCm/HIP for GPU rendering due to
+sandbox restrictions. If you want to render with your RX 9070 XT,
+install Blender natively instead:
+<code>sudo dnf install blender -y</code> (Since you already installed
+<code>rocm-hip</code> globally in Step 3, native Blender will
+automatically detect your GPU for Cycles rendering).</p>
+</div>
+<p><strong>LocalSend Firewall Rules:</strong> By default, Fedora's
+firewall will block incoming LocalSend file transfers. Run this to open
+the required port (53317):</p>
+<pre class="bash"><code>sudo firewall-cmd --add-port=53317/tcp --permanent
 sudo firewall-cmd --add-port=53317/udp --permanent
-sudo firewall-cmd --reload
-</code></pre>
+sudo firewall-cmd --reload</code></pre>
 <hr />
-<h2>Step 23 — Lian Li Linux (COPR)</h2>
-<p>Instead of compiling from source, we can now use the official RPM Fusion and COPR repositories for a much cleaner installation. This handles all dependencies, udev rules, and systemd services automatically.</p>
-<pre><code class="language-bash"># Ensure RPM Fusion is enabled (if not already)
+<h2 id="step-23--lian-li-linux-copr">Step 23 — Lian Li Linux (COPR)</h2>
+<p>Instead of compiling from source, we can now use the official RPM
+Fusion and COPR repositories for a much cleaner installation. This
+handles all dependencies, udev rules, and systemd services
+automatically.</p>
+<pre class="bash"><code># Ensure RPM Fusion is enabled (if not already)
 sudo dnf install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
 
 # Enable the Lian Li Linux COPR repository
 sudo dnf copr enable sgtaziz/lian-li-linux
 
 # Install the software
-sudo dnf install lian-li-linux
-</code></pre>
-<blockquote>
-<p>[!NOTE]
-The daemon should start automatically. You can launch <code>Lian Li Linux</code> from your KDE application launcher to configure your fans, pump, and LCD screen.</p>
-</blockquote>
-<blockquote>
-<p>[!TIP]
-<strong>Optional: Screen-Only Mode (Motherboard Sync)</strong><br>
-If you prefer to manage your fan curves in the BIOS and your RGB in OpenRGB, you can configure the Lian Li app to <em>only</em> manage the LCD screen:</p>
-<ol>
-<li>Ensure the Lian Li controller's PWM and ARGB cables are connected to your motherboard headers.</li>
-<li>Open the <strong>Lian Li Linux</strong> GUI and enable <strong>MB Sync</strong> (Motherboard Sync) for both Fans and Lighting.</li>
-<li>The app will now act strictly as a screen driver, letting your BIOS and OpenRGB handle the rest.</li>
+sudo dnf install lian-li-linux</code></pre>
+<div class="note">
+<div class="title">
+<p>Note</p>
+</div>
+<p>The daemon should start automatically. You can launch
+<code>Lian Li Linux</code> from your KDE application launcher to
+configure your fans, pump, and LCD screen.</p>
+</div>
+<div class="tip">
+<div class="title">
+<p>Tip</p>
+</div>
+<p><strong>Optional: Screen-Only Mode (Motherboard Sync)</strong> If you
+prefer to manage your fan curves in the BIOS and your RGB in OpenRGB,
+you can configure the Lian Li app to <em>only</em> manage the LCD
+screen:</p>
+<ol type="1">
+<li>Ensure the Lian Li controller's PWM and ARGB cables are connected to
+your motherboard headers.</li>
+<li>Open the <strong>Lian Li Linux</strong> GUI and enable <strong>MB
+Sync</strong> (Motherboard Sync) for both Fans and Lighting.</li>
+<li>The app will now act strictly as a screen driver, letting your BIOS
+and OpenRGB handle the rest.</li>
 </ol>
-</blockquote>
+</div>
 <hr />
-<h2>Step 24 — DaVinci Resolve 21.0 (in Distrobox)</h2>
-<p><strong>Before starting:</strong> download the DaVinci Resolve 21.0 <code>.run</code> installer from <a href="https://www.blackmagicdesign.com/products/davinciresolve">blackmagicdesign.com</a>.<br>
-Leave the downloaded <code>DaVinci_Resolve_Studio_21.0_Linux.run</code> file in <code>~/Downloads</code>.</p>
-<blockquote>
-<p>[!NOTE]
-<strong>Important setup details from the davincibox guide:</strong>
-- <strong>lshw dependency:</strong> <code>lshw</code> is required by the setup script to detect whether you are using an Nvidia, AMD, or Intel GPU. Some Fedora spins do not include this by default.
-- <strong>render and video groups:</strong> Your user must be added to these groups (<code>sudo usermod -aG render,video $USER</code>) to ensure hardware acceleration works inside the container.
-- <strong>App Export Name:</strong> The <code>davincibox</code> environment maps the internal application shortcut to <code>DaVinciResolve.desktop</code>.</p>
-<p>[!WARNING]
-DaVinci Resolve requires OpenCL for AMD GPU acceleration. Because you installed <code>rocm-opencl</code> globally in Step 3, Resolve should detect your GPU automatically inside the container.
-For RDNA 4 (RX 9070 XT), if you still get an "Unsupported GPU Processing Mode" error, you may need to run <code>export HSA_OVERRIDE_GFX_VERSION=11.0.0</code> before launching.</p>
-</blockquote>
-<pre><code class="language-bash"># Install Distrobox, Podman (needed for DaVinci and Affinity), and lshw
+<h2 id="step-24--davinci-resolve-21-in-distrobox">Step 24 — DaVinci
+Resolve 21 (in Distrobox)</h2>
+<p><strong>Before starting:</strong> download the DaVinci Resolve 21
+<strong>Studio</strong> installer from <a
+href="https://www.blackmagicdesign.com/products/davinciresolve">blackmagicdesign.com</a>
+(Blackmagic ships it as a <code>.zip</code> containing the
+<code>.run</code> file, e.g.
+<code>DaVinci_Resolve_Studio_21.x_Linux.zip</code>). Leave the
+downloaded <code>.zip</code> in <code>~/Downloads</code>.</p>
+<div class="note">
+<div class="title">
+<p>Note</p>
+</div>
+<p><strong>Important setup details from the davincibox
+guide:</strong></p>
+<ul>
+<li><strong>lshw dependency:</strong> <code>lshw</code> is required by
+the setup script to detect whether you are using an Nvidia, AMD, or
+Intel GPU. Some Fedora spins do not include this by default.</li>
+<li><strong>render and video groups:</strong> Your user must be added to
+these groups (<code>sudo usermod -aG render,video $USER</code>) to
+ensure hardware acceleration works inside the container.</li>
+<li><strong>App Export Name:</strong> The <code>davincibox</code>
+environment maps the internal application shortcut to
+<code>DaVinciResolve.desktop</code>.</li>
+</ul>
+</div>
+<div class="warning">
+<div class="title">
+<p>Warning</p>
+</div>
+<p>DaVinci Resolve requires OpenCL for AMD GPU acceleration. Because you
+installed <code>rocm-opencl</code> globally in Step 3, Resolve should
+detect your GPU automatically inside the container. Check that ROCm sees
+your card with <code>rocminfo | grep gfx</code> (the RX 9070 XT shows up
+as <code>gfx1201</code>). RDNA 4 is supported natively by current ROCm —
+do <strong>not</strong> set
+<code>HSA_OVERRIDE_GFX_VERSION=11.0.0</code>; that spoofs an RDNA 3 GPU
+and makes ROCm load code that RDNA 4 cannot run.</p>
+</div>
+<pre class="bash"><code># Install Distrobox, Podman (needed for DaVinci and Affinity), and lshw
 sudo dnf install podman distrobox lshw -y
 
 # Add your user to the render and video groups for hardware acceleration
@@ -667,33 +1011,43 @@ cd ~/davincibox
 unzip ~/Downloads/DaVinci_Resolve_*_Linux.zip -d ~/Downloads/
 
 # Run the setup script using the extracted .run file
-./setup.sh ~/Downloads/DaVinci_Resolve_*_Linux.run
-</code></pre>
-<p><code>davincibox</code> automatically creates a desktop entry — DaVinci Resolve will appear in your <strong>KDE app launcher</strong> after setup.</p>
+./setup.sh ~/Downloads/DaVinci_Resolve_*_Linux.run</code></pre>
+<p><code>davincibox</code> automatically creates a desktop entry —
+DaVinci Resolve will appear in your <strong>KDE app launcher</strong>
+after setup.</p>
 <p>If it doesn't, export it manually:</p>
-<pre><code class="language-bash">distrobox enter davincibox
-distrobox-export --app DaVinciResolve
-</code></pre>
+<pre class="bash"><code>distrobox enter davincibox
+distrobox-export --app DaVinciResolve</code></pre>
 <hr />
-<h2>Step 25 — DaVinci Resolve AAC Audio Fixes</h2>
-<p>DaVinci Resolve on Linux lacks AAC audio support. We will use two different tools to fix importing (hearing audio in the timeline) and exporting (rendering to AAC).</p>
-<p><strong>1. Fix Importing (davinci-resolve-audio-fix):</strong>
-This watches a folder and converts AAC to PCM automatically. Run this on your <strong>host Fedora system</strong>.</p>
-<pre><code class="language-bash"># Create a dedicated editing folder
+<h2 id="step-25--davinci-resolve-aac-audio-fixes">Step 25 — DaVinci
+Resolve AAC Audio Fixes</h2>
+<p>DaVinci Resolve on Linux lacks AAC audio support. We will use two
+different tools to fix importing (hearing audio in the timeline) and
+exporting (rendering to AAC).</p>
+<p><strong>1. Fix Importing (davinci-resolve-audio-fix):</strong> This
+watches a folder and converts AAC to PCM automatically. Run this on your
+<strong>host Fedora system</strong>.</p>
+<pre class="bash"><code># Create a dedicated editing folder
 mkdir ~/Montage
 
 # Install the watcher script
 git clone https://github.com/owlivion-tech/davinci-resolve-audio-fix.git ~/davinci-resolve-audio-fix
 cd ~/davinci-resolve-audio-fix
-bash install.sh
-</code></pre>
-<blockquote>
-<p>[!TIP]
-During installation, when asked for the directory to watch, specify <code>/home/$USER/Montage</code>. From now on, drop your camera files into <code>~/Montage</code> and they will be automatically converted for Resolve!</p>
-</blockquote>
-<p><strong>2. Fix Exporting (davinci-linux-aac-codec):</strong>
-Adds an AAC encoder to the Deliver page in DaVinci Resolve Studio. Because it's a plugin, it must be installed <strong>inside the Distrobox container</strong>.</p>
-<pre><code class="language-bash"># Enter the container
+bash install.sh</code></pre>
+<div class="tip">
+<div class="title">
+<p>Tip</p>
+</div>
+<p>During installation, when asked for the directory to watch, specify
+<code>/home/$USER/Montage</code>. From now on, drop your camera files
+into <code>~/Montage</code> and they will be automatically converted for
+Resolve!</p>
+</div>
+<p><strong>2. Fix Exporting (davinci-linux-aac-codec):</strong> Adds an
+AAC encoder to the Deliver page in DaVinci Resolve Studio. Because it's
+a plugin, it must be installed <strong>inside the Distrobox
+container</strong>.</p>
+<pre class="bash"><code># Enter the container
 distrobox enter davincibox
 
 # Download the latest pre-built release
@@ -702,12 +1056,13 @@ tar -xvf aac_encoder_plugin-linux-bundle.tar.gz
 cd aac_encoder_plugin-linux-bundle
 
 # Install the plugin to DaVinci Resolve
-sudo ./install.sh
-</code></pre>
+sudo ./install.sh</code></pre>
 <hr />
-<h2>Step 26 — Affinity Photo/Designer/Publisher (in Distrobox)</h2>
-<p>Runs Affinity apps via Wine inside an isolated container. Zero footprint on host — delete the container and everything is gone.</p>
-<pre><code class="language-bash"># Create a dedicated container
+<h2 id="step-26--affinity-photodesignerpublisher-in-distrobox">Step 26 —
+Affinity Photo/Designer/Publisher (in Distrobox)</h2>
+<p>Runs Affinity apps via Wine inside an isolated container. Zero
+footprint on host — delete the container and everything is gone.</p>
+<pre class="bash"><code># Create a dedicated container
 distrobox create --name affinitybox --image fedora:44
 
 # Enter the container
@@ -717,94 +1072,144 @@ distrobox enter affinitybox
 sudo dnf install python3-pyqt6 python3-pyqt6-svg -y
 
 # Run the Affinity installer GUI
-curl -sSL https://raw.githubusercontent.com/ryzendew/AffinityOnLinux/refs/heads/main/AffinityScripts/AffinityLinuxInstaller.py | python3
-</code></pre>
-<p>The GUI installer will guide you through Wine setup and Affinity installation.</p>
+curl -sSL https://raw.githubusercontent.com/ryzendew/AffinityOnLinux/refs/heads/main/AffinityScripts/AffinityLinuxInstaller.py | python3</code></pre>
+<p>The GUI installer will guide you through Wine setup and Affinity
+installation.</p>
 <p>When the GUI opens:</p>
-<ol>
-<li>Click <strong>"One-Click Full Setup"</strong> — it configures Wine and all dependencies automatically</li>
-<li>When asked for Wine version — pick <strong>Wine 10.10</strong> (recommended)</li>
-<li>Use <strong>"Update Affinity Applications"</strong> to install Affinity Photo, Designer, Publisher, or the unified v3 app</li>
+<ol type="1">
+<li>Click <strong>"One-Click Full Setup"</strong> — it configures Wine
+and all dependencies automatically</li>
+<li>When asked for Wine version — pick <strong>Wine 10.10</strong>
+(recommended)</li>
+<li>Use <strong>"Update Affinity Applications"</strong> to install
+Affinity Photo, Designer, Publisher, or the unified v3 app</li>
 </ol>
-<blockquote>
-<p>[!NOTE]
-GPU acceleration in Affinity uses <strong>Vulkan</strong> (via DXVK/vkd3d-proton), which the installer configures automatically. If you experience crashes, ensure OpenCL is disabled in Affinity's preferences — Vulkan provides more stable acceleration on AMD GPUs under Wine.</p>
-</blockquote>
-<p>After installing, export the app so it appears in your <strong>KDE app launcher</strong> like a normal app:</p>
-<pre><code class="language-bash"># Still inside the container — export the app to host
-distrobox-export --app affinity-photo     # or affinity-designer, affinity-publisher
-</code></pre>
-<p>Now you can find and launch Affinity from your normal app menu — no need to manually enter the container each time.</p>
-<blockquote>
-<p>[!TIP]
-<strong>To completely remove Affinity</strong> (zero traces left):
-<code>bash
-distrobox stop affinitybox
-distrobox rm affinitybox</code></p>
-</blockquote>
+<div class="note">
+<div class="title">
+<p>Note</p>
+</div>
+<p>GPU acceleration in Affinity uses <strong>Vulkan</strong> (via
+DXVK/vkd3d-proton), which the installer configures automatically. If you
+experience crashes, ensure OpenCL is disabled in Affinity's preferences
+— Vulkan provides more stable acceleration on AMD GPUs under Wine.</p>
+</div>
+<p>After installing, export the app so it appears in your <strong>KDE
+app launcher</strong> like a normal app:</p>
+<pre class="bash"><code># Still inside the container — export the app to host
+distrobox-export --app affinity-photo     # or affinity-designer, affinity-publisher</code></pre>
+<p>Now you can find and launch Affinity from your normal app menu — no
+need to manually enter the container each time.</p>
+<div class="tip">
+<div class="title">
+<p>Tip</p>
+</div>
+<p><strong>To completely remove Affinity</strong> (zero traces
+left):</p>
+<pre class="bash"><code>distrobox stop affinitybox
+distrobox rm affinitybox</code></pre>
+</div>
 <hr />
-<h2>Step 27 — Cherry Studio (Multi-Provider AI Chat)</h2>
-<p>Open-source AI chat client that supports 60+ providers — plug in your Claude, OpenAI, Gemini, or any API key. Full conversation history stored locally.</p>
-<p>Download the latest <code>.AppImage</code> from <a href="https://github.com/CherryHQ/cherry-studio/releases">Cherry Studio GitHub releases</a>, then integrate it with Gearlever:</p>
-<pre><code class="language-bash"># Move to your local bin
+<h2 id="step-27--cherry-studio-multi-provider-ai-chat">Step 27 — Cherry
+Studio (Multi-Provider AI Chat)</h2>
+<p>Open-source AI chat client that supports 60+ providers — plug in your
+Claude, OpenAI, Gemini, or any API key. Full conversation history stored
+locally.</p>
+<p>Download the latest <code>.AppImage</code> from <a
+href="https://github.com/CherryHQ/cherry-studio/releases">Cherry Studio
+GitHub releases</a>, then integrate it with Gearlever:</p>
+<pre class="bash"><code># Move to your local bin
 chmod +x ~/Downloads/Cherry-Studio-*.AppImage
-mv ~/Downloads/Cherry-Studio-*.AppImage ~/.local/bin/cherry-studio.appimage
-</code></pre>
-<p>Or open <strong>Gearlever</strong> (already installed from Step 7) and drag the AppImage into it — Gearlever will create the desktop entry and icon automatically.</p>
-<blockquote>
-<p>[!TIP]
-Cherry Studio also connects to <strong>local models</strong> via Ollama or LM Studio, so you can chat with Claude, GPT, and local models all from one app.</p>
-</blockquote>
+mv ~/Downloads/Cherry-Studio-*.AppImage ~/.local/bin/cherry-studio.appimage</code></pre>
+<p>Or open <strong>Gearlever</strong> (already installed from Step 7)
+and drag the AppImage into it — Gearlever will create the desktop entry
+and icon automatically.</p>
+<div class="tip">
+<div class="title">
+<p>Tip</p>
+</div>
+<p>Cherry Studio also connects to <strong>local models</strong> via
+Ollama or LM Studio, so you can chat with Claude, GPT, and local models
+all from one app.</p>
+</div>
 <hr />
-<h2>Step 28 — LM Studio (Local AI Models)</h2>
-<p>Run AI models entirely on your machine — no API keys, no internet, full privacy. Supports Llama, Mistral, Gemma, and hundreds more.</p>
-<p>Download the latest <code>.AppImage</code> from <a href="https://lmstudio.ai/">lmstudio.ai</a>, then:</p>
-<pre><code class="language-bash">chmod +x ~/Downloads/LM-Studio-*.AppImage
-mv ~/Downloads/LM-Studio-*.AppImage ~/.local/bin/lm-studio.appimage
-</code></pre>
-<p>Or use <strong>Gearlever</strong> to integrate it (same as Cherry Studio above).</p>
-<blockquote>
-<p>[!NOTE]
-LM Studio will now automatically detect your AMD GPU via ROCm. Your Ryzen 7 7800X3D and RX 9070 XT can handle 7B-13B parameter models at lightning speeds. For larger models (30B+), you'd want more RAM (32GB+ recommended).</p>
-</blockquote>
+<h2 id="step-28--lm-studio-local-ai-models">Step 28 — LM Studio (Local
+AI Models)</h2>
+<p>Run AI models entirely on your machine — no API keys, no internet,
+full privacy. Supports Llama, Mistral, Gemma, and hundreds more.</p>
+<p>Download the latest <code>.AppImage</code> from <a
+href="https://lmstudio.ai/">lmstudio.ai</a>, then:</p>
+<pre class="bash"><code>chmod +x ~/Downloads/LM-Studio-*.AppImage
+mv ~/Downloads/LM-Studio-*.AppImage ~/.local/bin/lm-studio.appimage</code></pre>
+<p>Or use <strong>Gearlever</strong> to integrate it (same as Cherry
+Studio above).</p>
+<div class="note">
+<div class="title">
+<p>Note</p>
+</div>
+<p>LM Studio will now automatically detect your AMD GPU via ROCm. Your
+Ryzen 7 7800X3D and RX 9070 XT can handle 7B-13B parameter models at
+lightning speeds. For larger models (30B+), you'd want more RAM (32GB+
+recommended).</p>
+</div>
 <hr />
-<h2>Step 29 — Ollama (AI Model Server for Remote Access)</h2>
-<p>Turns your Fedora PC into an AI inference server that any device on your Tailscale network can connect to — including Cherry Studio on your Mac.</p>
-<pre><code class="language-bash"># Install Ollama
-curl -fsSL https://ollama.com/install.sh | sh
-</code></pre>
+<h2 id="step-29--ollama-ai-model-server-for-remote-access">Step 29 —
+Ollama (AI Model Server for Remote Access)</h2>
+<p>Turns your Fedora PC into an AI inference server that any device on
+your Tailscale network can connect to — including Cherry Studio on your
+Mac.</p>
+<pre class="bash"><code># Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh</code></pre>
 <p><strong>Expose Ollama to your Tailscale network:</strong></p>
-<p>By default, Ollama only listens on <code>localhost</code>. To allow your other devices (like your Mac) to connect through Tailscale, override the bind address:</p>
-<pre><code class="language-bash">sudo systemctl edit ollama.service
-</code></pre>
+<p>By default, Ollama only listens on <code>localhost</code>. To allow
+your other devices (like your Mac) to connect through Tailscale,
+override the bind address:</p>
+<pre class="bash"><code>sudo systemctl edit ollama.service</code></pre>
 <p>Add these lines in the editor:</p>
-<pre><code class="language-ini">[Service]
-Environment="OLLAMA_HOST=0.0.0.0"
-</code></pre>
-<pre><code class="language-bash">sudo systemctl daemon-reload
-sudo systemctl restart ollama
-</code></pre>
+<pre class="ini"><code>[Service]
+Environment=&quot;OLLAMA_HOST=0.0.0.0&quot;</code></pre>
+<pre class="bash"><code>sudo systemctl daemon-reload
+sudo systemctl restart ollama</code></pre>
 <p><strong>Download a model to test with:</strong></p>
-<pre><code class="language-bash"># Download and chat (type /bye to exit)
-ollama run llama3.1
-</code></pre>
-<blockquote>
-<p>[!NOTE]
-<strong>No firewall rules needed!</strong> Because your Tailscale zone is set to <code>ACCEPT</code> (Step 16), Ollama's port <code>11434</code> is automatically accessible to all your Tailscale devices. Your main network remains fully locked down.</p>
-</blockquote>
+<pre class="bash"><code># Download and chat (type /bye to exit) — fits fully in 16GB VRAM
+ollama run qwen3:14b</code></pre>
+<div class="tip">
+<div class="title">
+<p>Tip</p>
+</div>
+<p>More model suggestions for your hardware are in
+<code>ollama_models.md</code>.</p>
+</div>
+<div class="note">
+<div class="title">
+<p>Note</p>
+</div>
+<p><strong>No firewall rules needed!</strong> Because your Tailscale
+zone is set to <code>ACCEPT</code> (Step 16), Ollama's port
+<code>11434</code> is automatically accessible to all your Tailscale
+devices. Your main network remains fully locked down.</p>
+</div>
 <p><strong>Connect from your Mac (or any Tailscale device):</strong></p>
-<ol>
-<li>Make sure <strong>Tailscale</strong> is running on both your Fedora PC and your Mac.</li>
-<li>Get your Fedora PC's Tailscale IP: <code>tailscale ip -4</code> (outputs a <code>100.x.x.x</code> address).</li>
-<li>Open <strong>Cherry Studio</strong> on your Mac → <strong>Settings</strong> → <strong>Providers</strong> → <strong>Ollama</strong>.</li>
-<li>Set the API URL to <code>http://100.x.x.x:11434</code> (replace with your actual Tailscale IP).</li>
-<li>Click <strong>Check</strong> — it will connect through the Tailscale tunnel and pull your available models.</li>
+<ol type="1">
+<li>Make sure <strong>Tailscale</strong> is running on both your Fedora
+PC and your Mac.</li>
+<li>Get your Fedora PC's Tailscale IP: <code>tailscale ip -4</code>
+(outputs a <code>100.x.x.x</code> address).</li>
+<li>Open <strong>Cherry Studio</strong> on your Mac →
+<strong>Settings</strong> → <strong>Providers</strong> →
+<strong>Ollama</strong>.</li>
+<li>Set the API URL to <code>http://100.x.x.x:11434</code> (replace with
+your actual Tailscale IP).</li>
+<li>Click <strong>Check</strong> — it will connect through the Tailscale
+tunnel and pull your available models.</li>
 </ol>
-<p>You can now chat with local AI models from your Mac, with all the heavy GPU processing happening silently on your Fedora PC.</p>
+<p>You can now chat with local AI models from your Mac, with all the
+heavy GPU processing happening silently on your Fedora PC.</p>
 <hr />
-<h2>Step 30 — Verify everything works</h2>
-<p>Final check for databases, creative applications, and system health:</p>
-<pre><code class="language-bash"># PostgreSQL container running and queryable?
+<h2 id="step-30--verify-everything-works">Step 30 — Verify everything
+works</h2>
+<p>Final check for databases, creative applications, and system
+health:</p>
+<pre class="bash"><code># PostgreSQL container running and queryable?
 systemctl --user status postgres
 podman exec -it postgres psql -U daniel -d mydb -c &quot;SELECT version();&quot;
 
@@ -820,10 +1225,9 @@ systemctl status lactd
 systemctl status docker
 systemctl status tailscaled
 systemctl --user status sunshine
-sudo snapper -c root list
-</code></pre>
+sudo snapper -c root list</code></pre>
 <hr />
-<h2>Summary — what lives where</h2>
+<h2 id="summary--what-lives-where">Summary — what lives where</h2>
 <table>
 <thead>
 <tr>
@@ -836,37 +1240,44 @@ sudo snapper -c root list
 <tr>
 <td style="text-align: left;">Snapper + grub-btrfs</td>
 <td style="text-align: left;">DNF &amp; Git (Source)</td>
-<td style="text-align: left;">System protection &amp; automatic snapshots before/after updates</td>
+<td style="text-align: left;">System protection &amp; automatic
+snapshots before/after updates</td>
 </tr>
 <tr>
 <td style="text-align: left;">LACT</td>
 <td style="text-align: left;">DNF (COPR)</td>
-<td style="text-align: left;">GPU overclocking, undervolting &amp; fan control (direct hardware access)</td>
+<td style="text-align: left;">GPU overclocking, undervolting &amp; fan
+control (direct hardware access)</td>
 </tr>
 <tr>
 <td style="text-align: left;">Flatpak + Discover</td>
 <td style="text-align: left;">DNF</td>
-<td style="text-align: left;">Universal sandboxed application repository</td>
+<td style="text-align: left;">Universal sandboxed application
+repository</td>
 </tr>
 <tr>
 <td style="text-align: left;">Gearlever</td>
 <td style="text-align: left;">Flatpak</td>
-<td style="text-align: left;">AppImage management, menu integration &amp; updates</td>
+<td style="text-align: left;">AppImage management, menu integration
+&amp; updates</td>
 </tr>
 <tr>
 <td style="text-align: left;">Docker CE</td>
 <td style="text-align: left;">DNF (Docker repo)</td>
-<td style="text-align: left;">University coursework, full Docker Compose compatibility</td>
+<td style="text-align: left;">University coursework, full Docker Compose
+compatibility</td>
 </tr>
 <tr>
 <td style="text-align: left;">OpenRGB</td>
 <td style="text-align: left;">DNF</td>
-<td style="text-align: left;">Motherboard, RAM &amp; peripheral RGB lighting control (I2C)</td>
+<td style="text-align: left;">Motherboard, RAM &amp; peripheral RGB
+lighting control (I2C)</td>
 </tr>
 <tr>
 <td style="text-align: left;">VS Code</td>
 <td style="text-align: left;">DNF (Microsoft repo)</td>
-<td style="text-align: left;">Code editor with native terminal &amp; extension support</td>
+<td style="text-align: left;">Code editor with native terminal &amp;
+extension support</td>
 </tr>
 <tr>
 <td style="text-align: left;">7-Zip &amp; UnRAR</td>
@@ -876,98 +1287,123 @@ sudo snapper -c root list
 <tr>
 <td style="text-align: left;">Fonts (MS &amp; Google)</td>
 <td style="text-align: left;">RPM / DNF</td>
-<td style="text-align: left;">Typography compatibility for creative tools &amp; documents</td>
+<td style="text-align: left;">Typography compatibility for creative
+tools &amp; documents</td>
 </tr>
 <tr>
 <td style="text-align: left;">Inkscape</td>
 <td style="text-align: left;">DNF</td>
-<td style="text-align: left;">Vector graphics with native Python extension support</td>
+<td style="text-align: left;">Vector graphics with native Python
+extension support</td>
 </tr>
 <tr>
 <td style="text-align: left;">Steam</td>
 <td style="text-align: left;">DNF</td>
-<td style="text-align: left;">Gaming platform with native Proton &amp; controller integration</td>
+<td style="text-align: left;">Gaming platform with native Proton &amp;
+controller integration</td>
 </tr>
 <tr>
 <td style="text-align: left;">GameMode + MangoHud + Gamescope</td>
 <td style="text-align: left;">DNF</td>
-<td style="text-align: left;">System-level gaming performance &amp; overlay tools</td>
+<td style="text-align: left;">System-level gaming performance &amp;
+overlay tools</td>
 </tr>
 <tr>
-<td style="text-align: left;">VirtualBox</td>
-<td style="text-align: left;">DNF (RPM Fusion)</td>
-<td style="text-align: left;">Easy-to-use cross-platform virtual machine manager</td>
+<td style="text-align: left;">KVM/QEMU + virt-manager</td>
+<td style="text-align: left;">DNF (@virtualization)</td>
+<td style="text-align: left;">Near-native VMs, runs Windows 11 (UEFI +
+TPM + VirtIO drivers)</td>
 </tr>
 <tr>
 <td style="text-align: left;">Tailscale</td>
 <td style="text-align: left;">DNF (Tailscale repo)</td>
-<td style="text-align: left;">Zero-config mesh VPN across all your devices</td>
+<td style="text-align: left;">Zero-config mesh VPN across all your
+devices</td>
 </tr>
 <tr>
 <td style="text-align: left;">Sunshine</td>
 <td style="text-align: left;">DNF (LizardByte repo)</td>
-<td style="text-align: left;">Low-latency game &amp; desktop streaming to Moonlight clients</td>
+<td style="text-align: left;">Low-latency game &amp; desktop streaming
+to Moonlight clients</td>
 </tr>
 <tr>
 <td style="text-align: left;">PostgreSQL</td>
 <td style="text-align: left;">Podman Quadlet</td>
-<td style="text-align: left;">Security-hardened relational database, no auto-start</td>
+<td style="text-align: left;">Security-hardened relational database, no
+auto-start</td>
 </tr>
 <tr>
 <td style="text-align: left;">MongoDB</td>
 <td style="text-align: left;">Podman Quadlet</td>
-<td style="text-align: left;">NoSQL database, containerized with systemd user service</td>
+<td style="text-align: left;">NoSQL database, containerized with systemd
+user service</td>
+</tr>
+<tr>
+<td style="text-align: left;">DBeaver Community</td>
+<td style="text-align: left;">Flatpak</td>
+<td style="text-align: left;">Database GUI for PostgreSQL, MongoDB &amp;
+more</td>
 </tr>
 <tr>
 <td style="text-align: left;">Multi-Account Git</td>
 <td style="text-align: left;">SSH + gitconfig</td>
-<td style="text-align: left;">Workspace-based identity switching for personal/work repos</td>
+<td style="text-align: left;">Workspace-based identity switching for
+personal/work repos</td>
 </tr>
 <tr>
-<td style="text-align: left;">Flatpak Apps (OBS, VLC, Krita, LibreWolf, Zoom, etc.)</td>
+<td style="text-align: left;">Flatpak Apps (OBS, VLC, Krita, LibreWolf,
+Zoom, etc.)</td>
 <td style="text-align: left;">Flatpak</td>
-<td style="text-align: left;">Self-contained productivity, media, communication &amp; privacy apps</td>
+<td style="text-align: left;">Self-contained productivity, media,
+communication &amp; privacy apps</td>
 </tr>
 <tr>
 <td style="text-align: left;">Lian Li Linux</td>
-<td style="text-align: left;">Built from source</td>
-<td style="text-align: left;">RGB fan &amp; AIO controller management</td>
+<td style="text-align: left;">DNF (COPR)</td>
+<td style="text-align: left;">RGB fan &amp; AIO controller
+management</td>
 </tr>
 <tr>
-<td style="text-align: left;">DaVinci Resolve 21.0</td>
+<td style="text-align: left;">DaVinci Resolve 21</td>
 <td style="text-align: left;">Distrobox</td>
-<td style="text-align: left;">Video editing in RHEL-compatible container</td>
+<td style="text-align: left;">Video editing in RHEL-compatible
+container</td>
 </tr>
 <tr>
 <td style="text-align: left;">Resolve AAC Fixes</td>
 <td style="text-align: left;">Script + Plugin</td>
-<td style="text-align: left;">Fixes Linux AAC import/export limitations</td>
+<td style="text-align: left;">Fixes Linux AAC import/export
+limitations</td>
 </tr>
 <tr>
 <td style="text-align: left;">Affinity Suite</td>
 <td style="text-align: left;">Distrobox + Wine</td>
-<td style="text-align: left;">Containerized photo/designer/publisher with GPU acceleration</td>
+<td style="text-align: left;">Containerized photo/designer/publisher
+with GPU acceleration</td>
 </tr>
 <tr>
 <td style="text-align: left;">Cherry Studio</td>
 <td style="text-align: left;">AppImage + Gearlever</td>
-<td style="text-align: left;">Multi-provider AI chat (Claude, GPT, local)</td>
+<td style="text-align: left;">Multi-provider AI chat (Claude, GPT,
+local)</td>
 </tr>
 <tr>
 <td style="text-align: left;">LM Studio</td>
 <td style="text-align: left;">AppImage + Gearlever</td>
-<td style="text-align: left;">Run open-source AI models locally, offline</td>
+<td style="text-align: left;">Run open-source AI models locally,
+offline</td>
 </tr>
 <tr>
 <td style="text-align: left;">Ollama</td>
-<td style="text-align: left;">DNF (Ollama script)</td>
-<td style="text-align: left;">AI model server, accessible from all Tailscale devices</td>
+<td style="text-align: left;">Install script</td>
+<td style="text-align: left;">AI model server, accessible from all
+Tailscale devices</td>
 </tr>
 </tbody>
 </table>
-
-<h3>System Directory &amp; App Hierarchy</h3>
-<pre><code class="language-text">/ (Root Btrfs Subvolume)
+<h3 id="system-directory--app-hierarchy">System Directory &amp; App
+Hierarchy</h3>
+<pre class="text"><code>/ (Root Btrfs Subvolume)
 ├── boot/
 │   └── grub2/
 │       └── grub.cfg           &lt;-- grub-btrfs modifies this to show snapshots
@@ -988,7 +1424,7 @@ sudo snapper -c root list
 │   │   ├── 7z / unrar         &lt;-- Archive tools
 │   │   ├── inkscape           &lt;-- Vector graphics editor
 │   │   ├── gamemoded / mangohud / gamescope &lt;-- Gaming performance tools
-│   │   ├── VirtualBox         &lt;-- Virtual machine manager
+│   │   ├── virt-manager       &lt;-- KVM/QEMU virtual machine manager
 │   │   ├── ollama             &lt;-- Local AI model server
 │   │   └── lianli-daemon / lianli-gui &lt;-- Fan controller (COPR package)
 │   │
@@ -1000,9 +1436,11 @@ sudo snapper -c root list
 │
 ├── var/                       &lt;-- System variable data
 │   ├── lib/docker/            &lt;-- Docker (system-level) containers/volumes
+│   ├── lib/libvirt/images/    &lt;-- KVM virtual machine disks (own Btrfs subvolume, no CoW)
 │   └── lib/flatpak/           &lt;-- System-wide Flatpak storage
 │       └── app/
 │           ├── it.mijorus.gearlever/  &lt;-- Gearlever
+│           ├── io.dbeaver.DBeaverCommunity/ &lt;-- DBeaver
 │           ├── org.blender.Blender/   &lt;-- Blender
 │           ├── org.kde.krita/         &lt;-- Krita
 │           ├── org.videolan.VLC/      &lt;-- VLC Media Player
@@ -1053,50 +1491,73 @@ sudo snapper -c root list
 ├── Database-data/             &lt;-- Persistent database storage
 │   ├── mongodb/               &lt;-- MongoDB raw files
 │   └── postgres/              &lt;-- PostgreSQL raw files
-├── Projects/                  &lt;-- Git workspace root
-│   ├── Personal/              &lt;-- Personal GitHub repos (uses personal SSH key)
-│   └── Work/                  &lt;-- Work/university GitLab repos (uses work SSH key)
-│
-└── VirtualBox VMs/            &lt;-- Virtual machine virtual disks
-</code></pre>
-
+└── Projects/                  &lt;-- Git workspace root
+    ├── Personal/              &lt;-- Personal GitHub repos (uses personal SSH key)
+    └── Work/                  &lt;-- Work/university GitLab repos (uses work SSH key)</code></pre>
 <hr />
-<h2>System Updates &amp; Maintenance</h2>
-<p>Keeping your system updated is simple, and your Btrfs/Snapper setup ensures you can't break your computer during the process.</p>
-<h3>System &amp; Flatpak Updates</h3>
-<p>You can update everything graphically by opening the <strong>Discover</strong> store and clicking "Update All". Or, use the terminal:</p>
-<pre><code class="language-bash"># Update core OS, drivers, and RPM packages
+<h2 id="system-updates--maintenance">System Updates &amp;
+Maintenance</h2>
+<p>Keeping your system updated is simple, and your Btrfs/Snapper setup
+ensures you can't break your computer during the process.</p>
+<h3 id="system--flatpak-updates">System &amp; Flatpak Updates</h3>
+<p>You can update everything graphically by opening the
+<strong>Discover</strong> store and clicking "Update All". Or, use the
+terminal:</p>
+<pre class="bash"><code># Update core OS, drivers, and RPM packages
 sudo dnf upgrade -y
 
 # Update all sandboxed Flatpak apps
-flatpak update -y
-</code></pre>
-<p><strong>How Snapshots Work During Updates:</strong><br>
-Thanks to the DNF hook we configured in Step 2, running a <code>dnf upgrade</code> automatically triggers <strong>Snapper</strong> to take a snapshot <em>before</em> the update and another snapshot <em>after</em> the update. If a bad kernel or GPU driver update causes your system to fail to boot, simply restart, select the pre-update snapshot from your GRUB menu, and your system will be instantly restored.</p>
-<h3>Updating AppImages (Cherry Studio / LM Studio)</h3>
-<p>AppImages do not update via DNF or Flatpak. To update an AppImage:</p>
-<ol>
-<li>Download the new <code>.AppImage</code> version from the app's website.</li>
+flatpak update -y</code></pre>
+<p><strong>How Snapshots Work During Updates:</strong> Thanks to the DNF
+hook we configured in Step 2, running a <code>dnf upgrade</code>
+automatically triggers <strong>Snapper</strong> to take a snapshot
+<em>before</em> the update and another snapshot <em>after</em> the
+update. If a bad kernel or GPU driver update causes your system to fail
+to boot, simply restart, select the pre-update snapshot from your GRUB
+menu, and your system will be instantly restored.</p>
+<h3 id="updating-appimages-cherry-studio--lm-studio">Updating AppImages
+(Cherry Studio / LM Studio)</h3>
+<p>AppImages do not update via DNF or Flatpak. To update an
+AppImage:</p>
+<ol type="1">
+<li>Download the new <code>.AppImage</code> version from the app's
+website.</li>
 <li>Open <strong>Gearlever</strong>.</li>
-<li>Drag and drop the new AppImage into Gearlever. It will ask if you want to replace the existing application. Say yes, and your application shortcuts will automatically point to the new version without breaking.</li>
+<li>Drag and drop the new AppImage into Gearlever. It will ask if you
+want to replace the existing application. Say yes, and your application
+shortcuts will automatically point to the new version without
+breaking.</li>
 </ol>
-<h3>Updating Containerized Apps</h3>
+<h3 id="updating-containerized-apps">Updating Containerized Apps</h3>
 <p><strong>DaVinci Resolve:</strong></p>
-<p>The <code>setup.sh</code> script manages your container installation. Run it from inside the <code>~/davincibox</code> folder using different arguments:</p>
+<p>The <code>setup.sh</code> script manages your container installation.
+Run it from inside the <code>~/davincibox</code> folder using different
+arguments:</p>
 <ul>
-<li><strong>Install:</strong> <code>./setup.sh ~/Downloads/DaVinci_Resolve_Studio_21.0_Linux.run</code> — builds the container, verifies your file, extracts it, installs Resolve, and creates a desktop shortcut.</li>
-<li><strong>Upgrade:</strong> First, download the new installer from <a href="https://www.blackmagicdesign.com/products/davinciresolve">blackmagicdesign.com</a> and <strong>extract the <code>.zip</code> file</strong> to get the new <code>.run</code> script. Then run <code>./setup.sh upgrade</code> to remove the old container, followed by <code>./setup.sh ~/Downloads/DaVinci_Resolve_Studio_NEW_VERSION_Linux.run</code> to do a fresh install with the new version.</li>
-<li><strong>Remove:</strong> <code>./setup.sh remove</code> — deletes the DaVinci Resolve shortcut from your desktop and completely removes the container.</li>
+<li><strong>Install:</strong>
+<code>./setup.sh ~/Downloads/DaVinci_Resolve_Studio_21.*_Linux.run</code>
+— builds the container, verifies your file, extracts it, installs
+Resolve, and creates a desktop shortcut.</li>
+<li><strong>Upgrade:</strong> First, download the new installer from <a
+href="https://www.blackmagicdesign.com/products/davinciresolve">blackmagicdesign.com</a>
+and <strong>extract the <code>.zip</code> file</strong> to get the new
+<code>.run</code> script. Then run <code>./setup.sh upgrade</code> to
+remove the old container, followed by
+<code>./setup.sh ~/Downloads/DaVinci_Resolve_Studio_NEW_VERSION_Linux.run</code>
+to do a fresh install with the new version.</li>
+<li><strong>Remove:</strong> <code>./setup.sh remove</code> — deletes
+the DaVinci Resolve shortcut from your desktop and completely removes
+the container.</li>
 </ul>
 <p><strong>Affinity Photo/Designer/Publisher:</strong></p>
-<pre><code class="language-bash"># Enter the container
+<pre class="bash"><code># Enter the container
 distrobox enter affinitybox
 
 # Run the installer GUI again
 curl -sSL https://raw.githubusercontent.com/ryzendew/AffinityOnLinux/refs/heads/main/AffinityScripts/AffinityLinuxInstaller.py | python3
 
-# In the GUI → click &quot;Update Affinity Applications&quot;
-</code></pre><script>
+# In the GUI → click &quot;Update Affinity Applications&quot;</code></pre>
+<script>
 
 document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll("pre").forEach(function(pre) {
